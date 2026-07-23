@@ -68,15 +68,21 @@ async def handle_message(update, context):
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(f"Project URL set to {project_url}.", reply_markup=reply_markup)
         
-        elif step == "wait_add":
+        elif step == "wait_add_url":
+            url = update.message.text.strip()
+            # Basic validation
+            if not url.startswith("http"):
+                url = "https://" + url
+            new_step = f"wait_add_niche|{url}"
+            c.execute("UPDATE onboard_sessions SET step=%s WHERE chat_id=%s AND user_id=%s", (new_step, str(chat_id), str(user_id)))
+            await update.message.reply_text(f"URL received: {url}\n\nNow, please reply with the Niche for this project (e.g. `Tech`, `AI Tools`, `Web Dev`).")
+            
+        elif step.startswith("wait_add_niche|"):
             c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
-            parts = update.message.text.split()
-            if len(parts) < 2:
-                await update.message.reply_text("Invalid format. Please use: <url> <niche>")
-            else:
-                url, niche = parts[0], " ".join(parts[1:])
-                context.args = [url, niche]
-                await add_command(update, context)
+            url = step.split("|", 1)[1]
+            niche = update.message.text.strip()
+            context.args = [url, niche]
+            await add_command(update, context)
                 
         elif step == "wait_delete":
             c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
@@ -160,7 +166,7 @@ async def handle_callback(update, context):
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
         state_map = {
-            "cmd_add": ("wait_add", "Please reply with the new project URL and Niche (e.g. `https://example.com Tech`)"),
+            "cmd_add": ("wait_add_url", "Please reply with the new project URL."),
             "cmd_delete": ("wait_delete", "Please reply with the Project URL you want to delete."),
             "cmd_angle": ("wait_angle", "Please reply with the Project URL to generate a live Trend-Jacking angle."),
             "cmd_sitemap": ("wait_sitemap", "Please reply with the Project URL to view its sitemap status.")
