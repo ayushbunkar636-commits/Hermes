@@ -3,3 +3,4 @@ requests==2.34.2
 trafilatura==2.1.0
 psycopg2-binary==2.9.12
 python-telegram-bot==21.3
+beautifulsoup4==4.12.3

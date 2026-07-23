@@ -10,7 +10,7 @@ pkill -9 node 2>/dev/null || true
 sleep 5
 
 echo "-> Verifying Python dependencies..."
-pip install -r requirements.txt > /dev/null 2>&1
+pip install -r requirements.txt
 
 # Run database foreign key constraints fix
 echo "-> Applying Database Foreign Key fixes..."
@@ -44,10 +44,8 @@ DAEMON_PID=$!
 # 3. Start the Next.js Dashboard
 echo "-> Starting Next.js Dashboard..."
 cd workspace-dashboard
-if [ ! -d "node_modules" ]; then
-    echo "-> Installing Dashboard dependencies (this will only happen once)..."
+echo "-> Verifying Dashboard dependencies..."
     npm install
-fi
 npm run dev -- -H 0.0.0.0 &
 cd ..
 DASHBOARD_PID=$!

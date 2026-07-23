@@ -184,6 +184,7 @@ async def handle_callback(update, context):
         await query.message.reply_text(prompt, parse_mode="Markdown")
         
     elif query.data.startswith("bl_"):
+        await query.answer()
         import subprocess
         import sys
         import os

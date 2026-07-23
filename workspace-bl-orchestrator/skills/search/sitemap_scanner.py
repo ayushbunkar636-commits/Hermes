@@ -50,7 +50,7 @@ def fetch_page_metadata(url: str) -> tuple[str, str]:
         return "", ""
 
 def parse_sitemap(sitemap_url: str) -> list[str]:
-    """Parse an XML sitemap and return a list of URLs."""
+    """Parse an XML sitemap and return a list of URLs. Handles nested sitemap indexes."""
     try:
         resp = requests.get(sitemap_url, headers=HEADERS, timeout=10)
         if resp.status_code >= 400:
@@ -58,19 +58,31 @@ def parse_sitemap(sitemap_url: str) -> list[str]:
             return []
             
         urls = []
+        sitemaps = []
         try:
             root = ET.fromstring(resp.content)
-            # Handle XML namespaces usually present in sitemaps
-            namespaces = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
-            for url_tag in root.findall('.//sm:url/sm:loc', namespaces):
-                if url_tag.text:
-                    urls.append(url_tag.text.strip())
             
-            # Fallback if namespace is different or missing
-            if not urls:
-                for loc in root.findall('.//{*}loc'):
-                    if loc.text:
-                        urls.append(loc.text.strip())
+            # Find all <loc> tags, regardless of namespace
+            for loc in root.findall('.//{*}loc'):
+                if loc.text:
+                    href = loc.text.strip()
+                    # If the link itself is an XML sitemap, it's a sitemapindex
+                    if href.endswith('.xml'):
+                        sitemaps.append(href)
+                    else:
+                        urls.append(href)
+            
+            # Recursively fetch nested sitemaps
+            for sm in sitemaps:
+                try:
+                    sm_resp = requests.get(sm, headers=HEADERS, timeout=10)
+                    if sm_resp.status_code < 400:
+                        sm_root = ET.fromstring(sm_resp.content)
+                        for loc in sm_root.findall('.//{*}loc'):
+                            if loc.text and not loc.text.strip().endswith('.xml'):
+                                urls.append(loc.text.strip())
+                except Exception as e:
+                    logger.error(f"Failed to parse nested sitemap {sm}: {e}")
                         
         except ET.ParseError:
             logger.error("Failed to parse sitemap XML.")

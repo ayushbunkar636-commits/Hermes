@@ -88,6 +88,10 @@ def load_json(path: str, default: dict | None = None) -> dict:
 
 
 def load_bot_token() -> str:
+    import config
+    if config.TELEGRAM_BOT_TOKEN:
+        return config.TELEGRAM_BOT_TOKEN
+
     tg_cfg = load_json(TELEGRAM_CONFIG)
     token = str(tg_cfg.get("bot_token") or "").strip()
     if token:
