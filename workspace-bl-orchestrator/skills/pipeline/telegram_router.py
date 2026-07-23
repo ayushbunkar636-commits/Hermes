@@ -183,6 +183,19 @@ async def handle_callback(update, context):
         
         await query.message.reply_text(prompt, parse_mode="Markdown")
         
+    elif query.data.startswith("cmd_angle_id_"):
+        pid = query.data.replace("cmd_angle_id_", "")
+        conn = config.get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT project_url FROM projects WHERE id = %s", (pid,))
+        proj = c.fetchone()
+        conn.close()
+        if proj:
+            context.args = [proj['project_url']]
+            await angle_command(update, context)
+        else:
+            await query.message.reply_text("Project not found.")
+
     elif query.data.startswith("bl_"):
         await query.answer()
         import subprocess
@@ -364,8 +377,13 @@ async def stats_command(update, context):
         sqlite_conn = sqlite3.connect(config.BL_DB_PATH)
         sqlite_conn.row_factory = sqlite3.Row
         sc = sqlite_conn.cursor()
-        sc.execute("SELECT status, COUNT(*) as cnt FROM harvest_leads GROUP BY status")
-        lead_rows = sc.fetchall()
+        lead_rows = []
+        try:
+            sc.execute("SELECT status, COUNT(*) as cnt FROM harvest_leads GROUP BY status")
+            lead_rows = sc.fetchall()
+        except sqlite3.OperationalError:
+            # Table might not exist yet if farmer hasn't run or if migrated
+            pass
         sqlite_conn.close()
         
         stats = {r["status"]: r["cnt"] for r in lead_rows}
@@ -443,13 +461,13 @@ async def trends_command(update, context):
 async def angle_command(update, context):
     """V2.0: /angle <project_url> - Generate a live Trend-Jacking angle."""
     if not _V2_ENABLED:
-        await update.message.reply_text("V2 Relevancy Engine not available on this server.")
+        await update.effective_message.reply_text("V2 Relevancy Engine not available on this server.")
         return
     if not context.args:
-        await update.message.reply_text("Usage: /angle <project_url>\nExample: /angle https://clientfruits.com")
+        await update.effective_message.reply_text("Usage: /angle <project_url>\nExample: /angle https://clientfruits.com")
         return
     project_url = context.args[0].strip()
-    await update.message.reply_text(f"Generating trend-jacking angle for `{project_url}`...", parse_mode="Markdown")
+    await update.effective_message.reply_text(f"Generating trend-jacking angle for `{project_url}`...", parse_mode="Markdown")
     try:
         # Get project from DB
         conn = config.get_db_connection()
@@ -458,31 +476,31 @@ async def angle_command(update, context):
         proj = c.fetchone()
         conn.close()
         if not proj:
-            await update.message.reply_text(f"Project not found: {project_url}\nAdd it first with /add")
+            await update.effective_message.reply_text(f"Project not found: {project_url}\nAdd it first with /add")
             return
         pid = proj['id']
         niche = proj['niche'] or ''
         sitemap = get_project_sitemap(pid)
         trend = get_latest_trend()
         if not sitemap:
-            await update.message.reply_text("Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
+            await update.effective_message.reply_text("Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
             scan_project_sitemap(pid, project_url)
             sitemap = get_project_sitemap(pid)
             if not sitemap:
-                await update.message.reply_text("Failed to find or parse sitemap for this URL. Ensure it has a /sitemap.xml")
+                await update.effective_message.reply_text("Failed to find or parse sitemap for this URL. Ensure it has a /sitemap.xml")
                 return
                 
         if not trend:
-            await update.message.reply_text("No trends found. Scanning live right now...", parse_mode="Markdown")
+            await update.effective_message.reply_text("No trends found. Scanning live right now...", parse_mode="Markdown")
             ingest_trends()
             trend = get_latest_trend()
             if not trend:
-                await update.message.reply_text("Failed to fetch trends. Try again later.")
+                await update.effective_message.reply_text("Failed to fetch trends. Try again later.")
                 return
                 
         rel_map = generate_relevancy_map(niche, sitemap, trend)
         if not rel_map.get('angle'):
-            await update.message.reply_text("Could not generate angle. Try again.")
+            await update.effective_message.reply_text("Could not generate angle. Try again.")
             return
         msg = (
             f"*Trend-Jacking Angle for {project_url}*\n\n"
@@ -491,9 +509,9 @@ async def angle_command(update, context):
             f"*Pillar Link:* {rel_map.get('pillar_url', 'N/A')}\n"
             f"*Post Link:* {rel_map.get('post_url', 'N/A')}"
         )
-        await update.message.reply_text(msg, parse_mode="Markdown")
+        await update.effective_message.reply_text(msg, parse_mode="Markdown")
     except Exception as e:
-        await update.message.reply_text(f"Error generating angle: {e}")
+        await update.effective_message.reply_text(f"Error generating angle: {e}")
 
 
 async def sitemap_command(update, context):
@@ -536,10 +554,12 @@ async def sitemap_command(update, context):
         msg = f"*Sitemap Knowledge Base: {project_url}*\n\n"
         for r in rows:
             msg += f"{r['page_type'].upper()} pages: {r['cnt']}\n"
-        msg += "\nUse /angle to generate a trend-jacking reply using these pages."
-        await update.message.reply_text(msg, parse_mode="Markdown")
+        msg += "\nClick the button below to generate a Trend-Jacking reply using these pages."
+        from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🧠 Generate Angle", callback_data=f"cmd_angle_id_{pid}")]])
+        await update.effective_message.reply_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
     except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
+        await update.effective_message.reply_text(f"Error: {e}")
 
 
 async def ingesttrends_command(update, context):
