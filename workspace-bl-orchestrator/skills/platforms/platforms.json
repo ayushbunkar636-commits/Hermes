@@ -1,0 +1,169 @@
+{
+  "version": "2",
+  "note": "Tier 1 is discussion/forum-first. freshness_default removed — discover.py ranks by recency from snippet instead of using hard DDG freshness filters (which return empty on site: queries).",
+  "tiers": [
+    {
+      "tier": 1,
+      "label": "High-credibility discussion platforms",
+      "weight": 0.95,
+      "platforms": [
+        {
+          "domain": "reddit.com",
+          "site_operator": "site:reddit.com",
+          "label": "Reddit",
+          "types": ["qa_community", "forum"],
+          "notes": "Highest priority. Search for active threads/questions. curl -L needed (Reddit 301s without trailing slash)."
+        },
+        {
+          "domain": "x.com",
+          "site_operator": "site:x.com OR site:twitter.com",
+          "label": "X / Twitter",
+          "types": ["forum", "qa_community"],
+          "notes": "Recent public threads/discussions on niche topics. Page fetch blocked; use snippet."
+        },
+        {
+          "domain": "news.ycombinator.com",
+          "site_operator": "site:news.ycombinator.com",
+          "label": "Hacker News",
+          "weight_override": 0.9,
+          "types": ["forum", "qa_community"],
+          "notes": "Tech/startup/crypto niche. Ask HN, Show HN threads, and comment discussions."
+        },
+        {
+          "domain": "bitcointalk.org",
+          "site_operator": "site:bitcointalk.org",
+          "label": "BitcoinTalk",
+          "weight_override": 0.9,
+          "types": ["forum", "qa_community"],
+          "notes": "Crypto-focused. Active threads in Altcoin Discussion, Speculation, Services boards."
+        }
+      ]
+    },
+    {
+      "tier": 2,
+      "label": "Crypto and niche discussion forums",
+      "weight": 0.82,
+      "platforms": [
+        {
+          "domain": "bitcoinstalk.org",
+          "site_operator": "site:bitcoinstalks.org OR site:bitcointalk.io",
+          "label": "Crypto Talk Forums",
+          "types": ["forum"],
+          "notes": "Crypto discussion boards."
+        },
+        {
+          "domain": "cryptotalk.org",
+          "site_operator": "site:cryptotalk.org",
+          "label": "CryptoTalk",
+          "types": ["forum", "qa_community"],
+          "notes": "Crypto bounty and discussion boards."
+        },
+        {
+          "domain": "forum.eff.org",
+          "site_operator": "site:forum.eff.org OR site:discuss.privacyguides.net",
+          "label": "Privacy/Crypto Forums",
+          "types": ["forum"],
+          "notes": "Privacy and crypto discussion."
+        },
+        {
+          "domain": "indiehackers.com",
+          "site_operator": "site:indiehackers.com",
+          "label": "Indie Hackers",
+          "types": ["forum", "qa_community"],
+          "notes": "Startup/SaaS community with active discussion boards."
+        }
+      ]
+    },
+    {
+      "tier": 3,
+      "label": "Q&A and community platforms",
+      "weight": 0.75,
+      "platforms": [
+        {
+          "domain": "quora.com",
+          "site_operator": "site:quora.com",
+          "label": "Quora",
+          "types": ["qa_community"],
+          "notes": "Find questions where the project directly answers user needs."
+        },
+        {
+          "domain": "stackoverflow.com",
+          "site_operator": "site:stackoverflow.com",
+          "label": "Stack Overflow",
+          "types": ["qa_community"],
+          "notes": "Technical niches. Look for unanswered or recently active questions."
+        },
+        {
+          "domain": "stackexchange.com",
+          "site_operator": "site:stackexchange.com",
+          "label": "Stack Exchange",
+          "types": ["qa_community"],
+          "notes": "Network of Q&A sites; covers crypto, money, tech, etc."
+        }
+      ]
+    },
+    {
+      "tier": 4,
+      "label": "Content publishing platforms",
+      "weight": 0.60,
+      "platforms": [
+        {
+          "domain": "medium.com",
+          "site_operator": "site:medium.com",
+          "label": "Medium",
+          "types": ["content_syndication", "comment"],
+          "notes": "Find publications accepting submissions. Comment on relevant articles."
+        },
+        {
+          "domain": "dev.to",
+          "site_operator": "site:dev.to",
+          "label": "dev.to",
+          "types": ["content_syndication", "comment"],
+          "notes": "Developer community. Guest posts and article comments."
+        },
+        {
+          "domain": "hashnode.com",
+          "site_operator": "site:hashnode.com",
+          "label": "Hashnode",
+          "types": ["content_syndication"],
+          "notes": "Developer blogs. Find publications with write-for-us or open submissions."
+        },
+        {
+          "domain": "substack.com",
+          "site_operator": "site:substack.com",
+          "label": "Substack",
+          "types": ["content_syndication"],
+          "notes": "Newsletter authors open to collaboration or cross-promotion."
+        }
+      ]
+    },
+    {
+      "tier": 5,
+      "label": "Directories, resource pages, listings",
+      "weight": 0.40,
+      "platforms": [
+        {
+          "domain": "producthunt.com",
+          "site_operator": "site:producthunt.com",
+          "label": "Product Hunt",
+          "types": ["product_listing"],
+          "notes": "Submit/upvote product listing. Also comment on related product launches."
+        },
+        {
+          "domain": "alternativeto.net",
+          "site_operator": "site:alternativeto.net",
+          "label": "AlternativeTo",
+          "types": ["product_listing", "directory"],
+          "notes": "Directory of software alternatives. Suggest the project as an alternative."
+        },
+        {
+          "domain": "g2.com",
+          "site_operator": "site:g2.com",
+          "label": "G2",
+          "types": ["product_listing", "directory"],
+          "notes": "Software review/directory. Submit product listing."
+        }
+      ]
+    }
+  ]
+}

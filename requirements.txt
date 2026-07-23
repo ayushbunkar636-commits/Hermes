@@ -1,0 +1,5 @@
+duckduckgo-search==8.1.1
+requests==2.34.2
+trafilatura==2.1.0
+psycopg2-binary==2.9.12
+python-telegram-bot==21.3

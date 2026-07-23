@@ -1,0 +1,48 @@
+# Backlink Agent — dev compose (local WSL). Boss bundle uses host.docker.internal for Bifrost.
+services:
+  bifrost:
+    image: maximhq/bifrost:v1.6.2
+    container_name: bifrost-backlink-dev
+    restart: unless-stopped
+    profiles: ["dev-bifrost"]
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+    volumes:
+      - ./bifrost-data:/app/data
+    ports:
+      - "8889:8080"
+
+  backlink-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: openclaw-backlink-agent:2026.4.24
+    container_name: openclaw-backlink-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-Asia/Kolkata}
+      HOME: /home/openclaw
+      XDG_CONFIG_HOME: /home/openclaw/.config
+      OPENCLAW_STATE_DIR: /home/openclaw/.openclaw-backlink
+      BIFROST_BASE_URL: ${BIFROST_BASE_URL:-http://host.docker.internal:8888/v1}
+      BL_DELIVERY_INTERVAL_MIN: ${BL_DELIVERY_INTERVAL_MIN:-60}
+      BL_SITES_PER_TICK: ${BL_SITES_PER_TICK:-5}
+      IMAGE_MODEL: ${IMAGE_MODEL:-vertex/gemini-3.1-flash-lite-image}
+      IMAGE_MODEL_FALLBACK: ${IMAGE_MODEL_FALLBACK:-huggingface/hf-inference/black-forest-labs/FLUX.1-schnell}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backlink-data/data:/home/openclaw/.openclaw-backlink/data
+      - ./backlink-data/telegram:/home/openclaw/.openclaw-backlink/telegram
+      - ./backlink-data/identity:/home/openclaw/.openclaw-backlink/identity
+      - ./backlink-data/devices:/home/openclaw/.openclaw-backlink/devices
+      - ./backlink-data/logs:/home/openclaw/.openclaw-backlink/logs
+      - ./backlink-data/backups:/home/openclaw/.openclaw-backlink/.backups
+      - ./backlink-data/workspace-bl-orchestrator/config:/home/openclaw/.openclaw-backlink/workspace-bl-orchestrator/config
+      - ./backlink-data/assets:/home/openclaw/.openclaw-backlink/assets
+      - ./backlink-data/exec-approvals.json:/home/openclaw/.openclaw-backlink/exec-approvals.json
+    ports:
+      - "${GATEWAY_PORT:-19789}:19789"

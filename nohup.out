@@ -1,0 +1,16 @@
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 1829)
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 8895)
+Terminated
+bash: run_daemon.sh: No such file or directory
+[run_daemon] --force: stopping existing supervisor pid=13567
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 14218)
+[run_daemon] --force: stopping existing supervisor pid=14218
+Terminated
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 14425)
+[run_daemon] --force: stopping existing supervisor pid=14425
+Terminated
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 28956)
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 21471)
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 1713)
+[run_daemon] starting; logs -> /home/bhard/.openclaw-backlink/logs/nexus_daemon.log (pid 827)
+Terminated

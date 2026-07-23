@@ -1,0 +1,192 @@
+{
+  "version": 1,
+  "socket": {
+    "path": "/home/bhard/.openclaw-backlink/exec-approvals.sock",
+    "token": "IGz1GzF-n2I3tbdgj6U_vX_TRkQ6YsJH"
+  },
+  "defaults": {
+    "security": "full",
+    "ask": "off"
+  },
+  "agents": {
+    "bl-orchestrator": {
+      "ask": "off",
+      "security": "full",
+      "allow": [
+        "/usr/bin/*",
+        "/usr/local/bin/*",
+        "/bin/*",
+        "/usr/sbin/*"
+      ],
+      "allowlist": [
+        {
+          "id": "bl-orch-init-run",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/init_run.sh",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-update-manifest",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/update_manifest_step.sh",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-cleanup",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/cleanup_run_artifacts.sh",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-check-whitelist",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/check_whitelist_health.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-seed-whitelist",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/seed_whitelist.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-merge-sites",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/merge_new_sites.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-dedupe",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/dedupe_opportunities.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-validate-scan",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/validate_scan.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-validate-score",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/validate_score.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-evict",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/evict_underperformers.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-sort",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/sort_opportunities.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-validate-content",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/validate_content.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-build-card",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/build_and_send_card.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-handle-feedback",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/handle_card_feedback.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-whitelist-db",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/whitelist_db.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-search",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/search.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-score-opps",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/score_opportunities.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-manage-projects",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/manage_projects.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-scan-tool",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/scan_tool.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-quality-gate",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/quality_gate.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-nexus-daemon",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/nexus_daemon.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-run-daemon",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/run_daemon.sh",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-seed-whitelist-2",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/pipeline/seed_whitelist.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-search-tool",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/search_tool.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-read-tool",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/read_tool.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-resolve-url",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/resolve_url.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-reddit-scan",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/reddit_scan.py",
+          "source": "allow-always"
+        },
+        {
+          "id": "bl-orch-lead-enrich",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-orchestrator/skills/search/lead_enrich.py",
+          "source": "allow-always"
+        }
+      ]
+    },
+    "bl-content": {
+      "ask": "off",
+      "security": "full",
+      "allow": [
+        "/usr/bin/*",
+        "/usr/local/bin/*",
+        "/bin/*"
+      ],
+      "allowlist": [
+        {
+          "id": "a1b2c3d4-bl-content-generate-wrapper",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-bl-content/skills/generate-image/generate.sh",
+          "source": "allow-always"
+        },
+        {
+          "id": "a1b2c3d4-bl-content-generate-core",
+          "pattern": "/home/bhard/.openclaw-backlink/workspace-creator/skills/generate-image/generate.sh",
+          "source": "allow-always"
+        }
+      ]
+    },
+    "bl-gate": {
+      "ask": "off",
+      "security": "full",
+      "allow": [],
+      "allowlist": []
+    }
+  }
+}

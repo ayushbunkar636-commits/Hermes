@@ -1,0 +1,11 @@
+# Web Crawling & Scraping
+beautifulsoup4>=4.12.3
+lxml>=5.2.2
+requests>=2.32.3
+
+# Database & Environment
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0.1
+
+# External APIs
+python-telegram-bot>=21.3
