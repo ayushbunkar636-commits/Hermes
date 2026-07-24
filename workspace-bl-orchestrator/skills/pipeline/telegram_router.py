@@ -795,7 +795,7 @@ def _sync_regen_task(opp):
         "id": opp.id,
         "url": opp.site_url or "",
         "domain": opp.site_domain or "",
-        "type": opp.post_type or "forum",
+        "type": opp.site_type or "forum",
         "target_title": opp.target_title or "",
         "target_excerpt": opp.target_excerpt or "",
         "discussion_intent": opp.opportunity_context or "",
