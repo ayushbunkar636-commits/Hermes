@@ -128,9 +128,6 @@ def build_inline_keyboard(card: dict) -> dict:
                 {"text": "✏️ Edit", "callback_data": f"bl_edit:{alert_id}"},
                 {"text": "❌ Reject", "callback_data": f"bl_reject:{alert_id}"},
             ],
-            [
-                {"text": "🔄 Regenerate Reply", "callback_data": f"bl_regen:{alert_id}"},
-            ],
         ]
     }
 
