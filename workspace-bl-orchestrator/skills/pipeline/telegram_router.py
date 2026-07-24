@@ -830,7 +830,7 @@ def _sync_regen_task(opp):
         "raw_json": "{}",
     }
     project_url = opp.project_url or ""
-    project = wdb.get_project_by_url(project_url, db_path=config.BL_DB_PATH) or {"project_url": project_url, "niche": "", "id": 0}
+    project = wdb.get_project(project_url, db_path=config.BL_DB_PATH) or {"project_url": project_url, "niche": "", "id": 0}
     run_dir, manifest_path, run_id = harvest_draft.build_run_bundle(project, [lead])
     ok = harvest_draft.invoke_ink(project, run_dir, manifest_path)
     if ok:

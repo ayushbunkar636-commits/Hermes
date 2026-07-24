@@ -487,7 +487,7 @@ def main() -> int:
                 "raw_json": "{}",
             }
             project_url = opp.project_url or ""
-            project = wdb.get_project_by_url(project_url, db_path=args.db_path) or {"project_url": project_url, "niche": "", "id": 0}
+            project = wdb.get_project(project_url, db_path=args.db_path) or {"project_url": project_url, "niche": "", "id": 0}
             run_dir, manifest_path, run_id = build_run_bundle(project, [lead])
             ok = invoke_ink(project, run_dir, manifest_path)
             if ok:
