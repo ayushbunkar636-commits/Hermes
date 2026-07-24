@@ -723,7 +723,25 @@ def tick() -> None:
     try:
         with wdb._connect(DB_PATH) as conn:
             rows = conn.execute("SELECT project_id FROM scan_progress").fetchall()
-            _active_progress_pids = [r["project_id"] for r in rows]
+            for r in rows:
+                pid = r["project_id"]
+                # Check if there are any due sites for this project
+                due_count = conn.execute(
+                    """
+                    SELECT COUNT(*) AS count FROM whitelist_sites w
+                    WHERE w.project_id = %s
+                      AND w.status IN ('active', 'cooldown')
+                      AND (w.next_scan_due IS NULL OR w.next_scan_due <= timezone('utc', now()))
+                      AND (w.cooldown_until IS NULL OR w.cooldown_until <= timezone('utc', now()))
+                    """,
+                    (pid,),
+                ).fetchone()
+                
+                due_val = due_count["count"] if due_count else 0
+                if due_val == 0:
+                    update_scan_progress(pid, 100, "No sites due for scanning (cooldown active. Next scan in ~30m).")
+                else:
+                    _active_progress_pids.append(pid)
     except Exception as e:
         log(f"Error querying active progress PIDs: {e}")
     
