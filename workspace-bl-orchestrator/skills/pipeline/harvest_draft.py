@@ -299,6 +299,8 @@ def send_cards(manifest_path: str, *, log_fn: Callable[[str], None] | None = Non
         out = (proc.stdout or "") + (proc.stderr or "")
         sent = 0
         for line in out.splitlines():
+            if "CARD_FAILED:" in line or "CARD_SENT:" in line:
+                log(f"cards: {line.strip()}")
             if line.startswith("CARDS_SUMMARY:"):
                 for tok in line.split():
                     if tok.startswith("sent="):
@@ -307,9 +309,6 @@ def send_cards(manifest_path: str, *, log_fn: Callable[[str], None] | None = Non
                         except ValueError:
                             sent = 0
                 log(f"cards: {line.strip()}")
-                break
-        else:
-            log("cards: no CARDS_SUMMARY in output")
         return sent
     except Exception as e:  # noqa: BLE001
         log(f"cards: ERROR {e}")

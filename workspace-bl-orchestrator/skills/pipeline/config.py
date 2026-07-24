@@ -8,17 +8,27 @@ def load_env(env_path=None):
         env_path = os.path.join(root_dir, ".env")
     if not os.path.exists(env_path):
         return
-    with open(env_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                key, val = line.split("=", 1)
-                key = key.strip()
-                val = val.strip().strip('"').strip("'")
-                if key not in os.environ:
-                    os.environ[key] = val
+    # Try multiple encodings: utf-8-sig (BOM), utf-16, utf-8
+    content = None
+    for enc in ("utf-8-sig", "utf-16", "utf-8", "latin-1"):
+        try:
+            with open(env_path, "r", encoding=enc) as f:
+                content = f.read()
+            break
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+    if not content:
+        return
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, val = line.split("=", 1)
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key not in os.environ:
+                os.environ[key] = val
 
 load_env()
 
