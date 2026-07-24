@@ -215,6 +215,16 @@ CREATE TABLE IF NOT EXISTS onboard_sessions (
   updated_at TEXT DEFAULT (timezone('utc', now())),
   UNIQUE(chat_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS scan_progress (
+  project_id          INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+  percent             INTEGER NOT NULL DEFAULT 0,
+  status              TEXT NOT NULL,
+  chat_id             TEXT NOT NULL,
+  telegram_message_id INTEGER NOT NULL,
+  started_at          TEXT DEFAULT (timezone('utc', now())),
+  updated_at          TEXT DEFAULT (timezone('utc', now()))
+);
 """
 
 
@@ -1457,6 +1467,47 @@ def clear_onboard_session(chat_id: str, user_id: str, *, db_path: str = DEFAULT_
             "DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s",
             (str(chat_id), str(user_id)),
         )
+        conn.commit()
+
+
+def upsert_scan_progress(
+    project_id: int,
+    percent: int,
+    status: str,
+    chat_id: str,
+    telegram_message_id: int,
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
+    init_whitelist_db(db_path)
+    with _connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO scan_progress (project_id, percent, status, chat_id, telegram_message_id, updated_at)
+            VALUES (%s, %s, %s, %s, %s, timezone('utc', now()))
+            ON CONFLICT(project_id) DO UPDATE SET
+              percent = excluded.percent,
+              status = excluded.status,
+              updated_at = timezone('utc', now())
+            """,
+            (project_id, percent, status, str(chat_id), telegram_message_id),
+        )
+        conn.commit()
+
+
+def get_scan_progress(project_id: int, db_path: str = DEFAULT_DB_PATH) -> dict | None:
+    init_whitelist_db(db_path)
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM scan_progress WHERE project_id=%s LIMIT 1",
+            (project_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_scan_progress(project_id: int, db_path: str = DEFAULT_DB_PATH) -> None:
+    init_whitelist_db(db_path)
+    with _connect(db_path) as conn:
+        conn.execute("DELETE FROM scan_progress WHERE project_id=%s", (project_id,))
         conn.commit()
 
 

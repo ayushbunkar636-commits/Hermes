@@ -114,6 +114,97 @@ def log(msg: str) -> None:
         pass
 
 
+def update_scan_progress(project_id: int, percent: int, status: str) -> None:
+    progress = wdb.get_scan_progress(project_id, db_path=DB_PATH)
+    if not progress:
+        return
+        
+    # Update progress in db
+    wdb.upsert_scan_progress(project_id, percent, status, progress["chat_id"], progress["telegram_message_id"], db_path=DB_PATH)
+    
+    # Calculate elapsed time
+    import datetime
+    from dateparser import parse as parse_date
+    
+    elapsed_str = "0s"
+    remaining_str = "8m"
+    try:
+        started_at = progress.get("started_at")
+        if started_at:
+            started_dt = parse_date(started_at)
+            if started_dt:
+                elapsed = int((datetime.datetime.utcnow() - started_dt).total_seconds())
+                elapsed = max(0, elapsed)
+                elapsed_str = f"{elapsed // 60}m {elapsed % 60}s" if elapsed > 60 else f"{elapsed}s"
+                
+                total_est = 480  # 8 minutes
+                remaining = max(10, total_est - elapsed)
+                if percent >= 100:
+                    remaining = 0
+                remaining_str = f"{remaining // 60}m {remaining % 60}s" if remaining > 60 else f"{remaining}s"
+    except Exception:
+        pass
+        
+    if percent >= 100:
+        remaining_str = "Done"
+
+    filled = percent // 10
+    bar = "■" * filled + "░" * (10 - filled)
+    
+    if percent >= 100:
+        if "No opportunities" in status:
+            status_msg = (
+                f"✅ *Project Setup: Complete* [{bar}] 100% Scanned\n"
+                f"• *Status:* {status}\n"
+                f"• *Total Time:* {elapsed_str}\n\n"
+                f"_Tracking fully active. Future opportunities will be sent here automatically._"
+            )
+        else:
+            status_msg = (
+                f"✅ *Project Setup: Complete* [{bar}] 100% Scanned\n"
+                f"• *Status:* First opportunities delivered successfully!\n"
+                f"• *Total Time:* {elapsed_str}\n\n"
+                f"_Tracking fully active. Future opportunities will be sent here automatically._"
+            )
+    else:
+        status_msg = (
+            f"⏳ *Project Setup: Active* [{bar}] {percent}% Scanned\n"
+            f"• *Status:* {status}\n"
+            f"• *Time Elapsed:* {elapsed_str}\n"
+            f"• *Est. Remaining:* ~{remaining_str}\n\n"
+            f"_Aapko pehla backlink opportunity report jald hi isi chat mein mil jayega._"
+        )
+        
+    # Send Telegram editMessageText request
+    import urllib.request
+    token = config.TELEGRAM_BOT_TOKEN
+    chat_id = progress["chat_id"]
+    message_id = progress["telegram_message_id"]
+    
+    url = f"https://api.telegram.org/bot{token}/editMessageText"
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "text": status_msg,
+        "parse_mode": "Markdown"
+    }
+    
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+    except Exception as e:
+        log(f"Failed to edit progress message: {e}")
+        
+    if percent >= 100:
+        wdb.delete_scan_progress(project_id, db_path=DB_PATH)
+
+
 def _funnel_snapshot(db_path: str) -> dict[str, int]:
     counts: dict[str, int] = {}
     with wdb._connect(db_path) as conn:
@@ -240,6 +331,8 @@ def phase_scan() -> None:
         log("scan: no sites due")
         return
     for site in due:
+        pid = site.get("project_id")
+        update_scan_progress(pid, 20, f"Discovering leads from {site.get('domain')}...")
         plog_verbose(
             "tick", "due_sites",
             domain=site.get("domain"),
@@ -262,6 +355,7 @@ def phase_score() -> None:
     scored = 0
     for lead in new_leads:
         pid = lead["project_id"]
+        update_scan_progress(pid, 50, "Evaluating and scoring found opportunities...")
         domain = (lead.get("domain") or "").lower().lstrip("www.")
         ckey = (pid, domain)
         if ckey not in usability_cache:
@@ -307,6 +401,7 @@ def phase_score() -> None:
 def phase_gate() -> None:
     for project in wdb.get_active_projects(db_path=DB_PATH):
         pid = project["id"]
+        update_scan_progress(pid, 70, "Gating and verifying opportunity compliance...")
         scored = wdb.get_leads_by_status("SCORED", limit=GATE_TOP_N, project_id=pid, db_path=DB_PATH)
         scored = [l for l in scored if (l.get("score_100") or 0) >= SCORE_FLOOR]
         
@@ -558,6 +653,7 @@ def phase_draft() -> None:
         gated = wdb.get_leads_by_status("GATED", limit=DRAFT_BATCH_MAX, project_id=pid, db_path=DB_PATH)
         if len(gated) < DRAFT_BATCH_MIN:
             continue
+        update_scan_progress(pid, 85, f"Generating copy-paste drafting replies for {len(gated)} opportunities...")
         log(f"draft: project={project.get('project_url')} drafting {len(gated)} GATED leads")
         result = draft_and_send(project, gated, db_path=DB_PATH, log_fn=log)
         if result.error:
@@ -568,6 +664,7 @@ def phase_draft() -> None:
             _last_delivery_ts[pid] = time.time()
             log(f"draft: SENT {result.sent} card(s) for {project.get('project_url')}")
             bdb.add_notification("telegram", "Telegram Cards Delivered", f"Successfully delivered {result.sent} card(s) to the Telegram group.", db_path=DB_PATH)
+            update_scan_progress(pid, 100, "First opportunities delivered successfully!")
 
 
 def phase_resurface() -> None:
@@ -666,6 +763,18 @@ def tick() -> None:
         )
     plog_verbose("tick", "tick_end", tick=_tick_counter, duration_ms=int((time.time() - tick_start) * 1000))
     _log_funnel()
+    
+    # Tick Cleanup for Scan Progress:
+    try:
+        # Get all projects in scan_progress
+        with wdb._connect(DB_PATH) as conn:
+            progress_rows = conn.execute("SELECT project_id, percent, status FROM scan_progress").fetchall()
+        for row in progress_rows:
+            pid = row["project_id"]
+            # If the tick ended but progress is still active, mark it complete with a friendly fallback
+            update_scan_progress(pid, 100, "No new opportunities found in this scan cycle.")
+    except Exception as e:
+        log(f"progress cleanup error: {e}")
 
 
 def main() -> int:

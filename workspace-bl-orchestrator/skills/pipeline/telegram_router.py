@@ -364,7 +364,24 @@ async def add_command(update, context):
         for site in default_sites:
             wdb.upsert_whitelist_site(pid, site, added_by="seed", db_path=config.BL_DB_PATH)
             
-        await update.effective_message.reply_text(f"✅ Project {project} added successfully!\n⏸️ All other projects have been paused.\nNiche set to: {niche}. Tracking started.")
+        progress_text = (
+            "⏳ *Project Setup: Active* [░░░░░░░░░░] 0% Scanned\n"
+            "• *Status:* Project Initialized\n"
+            "• *Time Elapsed:* 0s\n"
+            "• *Est. Remaining:* ~8m\n\n"
+            "_Aapko pehla backlink opportunity report jald hi isi chat mein mil jayega._"
+        )
+        sent_msg = await update.effective_message.reply_text(progress_text, parse_mode="Markdown")
+        
+        # Save progress record so the background daemon can edit this message
+        wdb.upsert_scan_progress(
+            project_id=pid,
+            percent=0,
+            status="Project Initialized",
+            chat_id=str(update.effective_chat.id),
+            telegram_message_id=sent_msg.message_id,
+            db_path=config.BL_DB_PATH
+        )
     except Exception as e:
         await update.effective_message.reply_text(f"❌ Error adding project: {e}")
 
