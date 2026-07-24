@@ -202,10 +202,6 @@ def _funnel_snapshot(db_path: str) -> dict[str, int]:
     with wdb._connect(db_path) as conn:
         for row in conn.execute("SELECT status, COUNT(*) FROM harvest_leads GROUP BY status"):
             counts[row[0] or "unknown"] = int(row[1])
-        pending = conn.execute(
-            "SELECT COUNT(*) FROM opportunities WHERE status = 'pending'"
-        ).fetchone()[0]
-    counts["pending_cards"] = int(pending)
     return counts
 
 
@@ -754,7 +750,10 @@ def tick() -> None:
             phase=name, duration_ms=int((time.time() - phase_start) * 1000),
         )
     plog_verbose("tick", "tick_end", tick=_tick_counter, duration_ms=int((time.time() - tick_start) * 1000))
-    _log_funnel()
+    try:
+        _log_funnel()
+    except Exception as e:
+        log(f"log_funnel error: {e}")
     
     # Tick Cleanup for Scan Progress:
     try:
