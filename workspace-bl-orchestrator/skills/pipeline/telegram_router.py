@@ -369,7 +369,7 @@ async def add_command(update, context):
             "• *Status:* Project Initialized\n"
             "• *Time Elapsed:* 0s\n"
             "• *Est. Remaining:* ~8m\n\n"
-            "_Aapko pehla backlink opportunity report jald hi isi chat mein mil jayega._"
+            "_You will receive the first backlink opportunity report in this chat shortly._"
         )
         sent_msg = await update.effective_message.reply_text(progress_text, parse_mode="Markdown")
         

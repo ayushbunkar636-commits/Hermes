@@ -172,7 +172,7 @@ def update_scan_progress(project_id: int, percent: int, status: str) -> None:
             f"• *Status:* {status}\n"
             f"• *Time Elapsed:* {elapsed_str}\n"
             f"• *Est. Remaining:* ~{remaining_str}\n\n"
-            f"_Aapko pehla backlink opportunity report jald hi isi chat mein mil jayega._"
+            f"_You will receive the first backlink opportunity report in this chat shortly._"
         )
         
     # Send Telegram editMessageText request
