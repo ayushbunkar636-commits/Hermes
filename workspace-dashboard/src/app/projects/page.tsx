@@ -23,10 +23,15 @@ export default function ProjectsPage() {
   const fetchActivity = async () => {
     try {
       const res = await fetch('/api/activity');
-      const data = await res.json();
+      const text = await res.text();
+      if (!text) {
+        setActivityLogs([]);
+        return;
+      }
+      const data = JSON.parse(text);
       setActivityLogs(data.events || []);
     } catch (e) {
-      console.error(e);
+      // silently ignore parse errors from empty polling
     }
   };
 
