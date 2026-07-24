@@ -509,7 +509,7 @@ def save_content_version(
     user_username: str | None = None,
     db_path: str = DEFAULT_DB_PATH,
 ) -> int:
-    if version_type not in ("published_snapshot", "user_suggested", "applied"):
+    if version_type not in ("published_snapshot", "user_suggested", "applied", "regenerated"):
         raise ValueError(f"invalid version_type: {version_type}")
     init_db(db_path)
     with _connect(db_path) as conn:
