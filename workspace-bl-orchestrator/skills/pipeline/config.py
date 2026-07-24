@@ -32,8 +32,16 @@ def load_env(env_path=None):
 
 load_env()
 
-BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://placing-reliability-container-oecd.trycloudflare.com/v1")
-DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "vertex/gemini-2.5-flash")
+# Mistral AI Override
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "Hs0rbI257TWjVuuHPUkSg9MToULOmjPp").strip()
+if MISTRAL_API_KEY:
+    os.environ["HERMES_API_KEY"] = MISTRAL_API_KEY
+    BIFROST_BASE_URL = "https://api.mistral.ai/v1"
+    DEFAULT_MODEL = "mistral-large-latest"
+else:
+    BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://placing-reliability-container-oecd.trycloudflare.com/v1")
+    DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "vertex/gemini-2.5-flash")
+
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 SUPABASE_CONNECTION_STRING = os.environ.get("SUPABASE_CONNECTION_STRING", os.environ.get("DATABASE_URL", ""))

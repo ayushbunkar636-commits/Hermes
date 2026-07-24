@@ -53,14 +53,17 @@ def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_ret
                 })
     
     data_encoded = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json", 
+        "Authorization": f"Bearer {os.environ.get('HERMES_API_KEY')}"
+    }
+    if "mistral.ai" not in url:
+        headers["x-bf-vk"] = str(os.environ.get('HERMES_API_KEY'))
+        
     req = urllib.request.Request(
         url,
         data=data_encoded,
-        headers={
-            "Content-Type": "application/json", 
-            "Authorization": f"Bearer {os.environ.get('HERMES_API_KEY')}",
-            "x-bf-vk": str(os.environ.get('HERMES_API_KEY'))
-        },
+        headers=headers,
         method="POST",
     )
     
