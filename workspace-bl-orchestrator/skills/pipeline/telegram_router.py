@@ -70,12 +70,15 @@ async def handle_message(update, context):
         
         elif step == "wait_add_url":
             url = update.message.text.strip()
+            if '\n' in url:
+                # Extract the actual URL if user copy-pasted a multi-line message
+                url = url.split('\n')[-1].strip()
             # Basic validation
             if not url.startswith("http"):
                 url = "https://" + url
             new_step = f"wait_add_niche|{url}"
             c.execute("UPDATE onboard_sessions SET step=%s WHERE chat_id=%s AND user_id=%s", (new_step, str(chat_id), str(user_id)))
-            await update.message.reply_text(f"URL received: {url}\n\nNow, please reply with the Niche for this project (e.g. `Tech`, `AI Tools`, `Web Dev`).")
+            await update.message.reply_text(f"URL received:\n{url}\n\nNow, please reply with the Niche for this project (e.g. `Tech`, `AI Tools`, `Web Dev`).")
             
         elif step.startswith("wait_add_niche|"):
             c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
@@ -424,6 +427,7 @@ async def health_command(update, context):
         ago = int(time.time() - last_tick)
         status = data.get("status", "unknown")
         ticks = data.get("total_ticks", 0)
+        air_gap = data.get("air_gap", 300)
         
         msg = (
             "*Daemon Health Status*\n"
@@ -431,8 +435,8 @@ async def health_command(update, context):
             f"Last Tick: `{ago} seconds ago`\n"
             f"Total Ticks Processed: `{ticks}`"
         )
-        if ago > 300:
-            msg += "\n\nWARNING: Daemon has not updated heartbeat in over 5 minutes. It may have crashed."
+        if ago > (air_gap + 60):
+            msg += f"\n\nWARNING: Daemon has not updated heartbeat in over {air_gap//60} minutes. It may have crashed."
     except Exception as e:
         msg = f"Failed to read heartbeat: `{e}`\nIs the daemon running?"
         
@@ -601,6 +605,21 @@ async def menu_command(update, context):
     )
     await update.effective_message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
 
+async def help_command(update, context):
+    """Displays available commands."""
+    msg = (
+        "*Available Commands*\n"
+        "/start - Show Hermes Dashboard\n"
+        "/projects - List active projects\n"
+        "/add - Add a new project\n"
+        "/stats - View project statistics\n"
+        "/health - Check daemon health\n"
+        "/trends - Show trending topics\n"
+        "/angle - Generate a trend-jacking angle\n"
+        "/sitemap - Process sitemap for a project\n"
+    )
+    await update.effective_message.reply_text(msg, parse_mode="Markdown")
+
 async def help_callback(update, context):
     """(Deprecated) Help section no longer needed as all features are buttons."""
     pass
@@ -616,6 +635,7 @@ def main():
     app.add_handler(CommandHandler("start", menu_command))
     app.add_handler(CommandHandler("menu", menu_command))
     # V1 Commands
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("onboard", onboard_command))
     app.add_handler(CommandHandler("add", add_command))
     app.add_handler(CommandHandler("projects", projects_command))

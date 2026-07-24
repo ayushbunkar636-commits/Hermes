@@ -707,7 +707,8 @@ def main() -> int:
                 json.dump({
                     "last_tick_time": time.time(),
                     "total_ticks": ticks,
-                    "status": "alive"
+                    "status": "alive",
+                    "air_gap": args.air_gap
                 }, hf)
         except Exception as e:
             log(f"failed to write heartbeat: {e}")
