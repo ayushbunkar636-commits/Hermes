@@ -81,26 +81,30 @@ async def handle_message(update, context):
             await update.message.reply_text(f"URL received:\n{url}\n\nNow, please reply with the Niche for this project (e.g. `Tech`, `AI Tools`, `Web Dev`).")
             
         elif step.startswith("wait_add_niche|"):
-            c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             url = step.split("|", 1)[1]
             niche = update.message.text.strip()
             context.args = [url, niche]
-            await add_command(update, context)
+            success = await add_command(update, context)
+            if success:
+                c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
                 
         elif step == "wait_delete":
-            c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             context.args = [update.message.text.strip()]
-            await delete_command(update, context)
+            success = await delete_command(update, context)
+            if success:
+                c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             
         elif step == "wait_angle":
-            c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             context.args = [update.message.text.strip()]
-            await angle_command(update, context)
+            success = await angle_command(update, context)
+            if success:
+                c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             
         elif step == "wait_sitemap":
-            c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             context.args = [update.message.text.strip()]
-            await sitemap_command(update, context)
+            success = await sitemap_command(update, context)
+            if success:
+                c.execute("DELETE FROM onboard_sessions WHERE chat_id=%s AND user_id=%s", (str(chat_id), str(user_id)))
             
         conn.commit()
     else:
@@ -382,8 +386,10 @@ async def add_command(update, context):
             telegram_message_id=sent_msg.message_id,
             db_path=config.BL_DB_PATH
         )
+        return True
     except Exception as e:
         await update.effective_message.reply_text(f"❌ Error adding project: {e}")
+        return False
 
 async def projects_command(update, context):
     """Lists all active projects."""
@@ -435,8 +441,12 @@ async def delete_command(update, context):
         await msg_obj.edit_text(f"🗑️ Project deleted from all systems:\n`{project}`", parse_mode="Markdown")
     except ValueError as e:
         await msg_obj.edit_text(f"❌ {e}")
+        return False
     except Exception as e:
         await msg_obj.edit_text(f"❌ Error deleting project: {e}")
+        return False
+        
+    return True
 
 async def scan_command(update, context):
     """Handles /scan"""
@@ -569,7 +579,7 @@ async def angle_command(update, context):
         conn.close()
         if not proj:
             await msg_obj.edit_text(f"Project not found: {project_url}\nAdd it first with /add")
-            return
+            return False
         pid = proj['id']
         niche = proj['niche'] or ''
         await msg_obj.edit_text("⏳ Checking Sitemap Knowledge Base...")
@@ -581,7 +591,7 @@ async def angle_command(update, context):
             sitemap = get_project_sitemap(pid)
             if not sitemap:
                 await msg_obj.edit_text("❌ Failed to find or parse sitemap for this URL. Ensure it has a /sitemap.xml")
-                return
+                return False
                 
         await msg_obj.edit_text("⏳ Checking for Top Global Trends...")
         if not trend:
@@ -590,13 +600,13 @@ async def angle_command(update, context):
             trend = get_latest_trend()
             if not trend:
                 await msg_obj.edit_text("❌ Failed to fetch trends. Try again later.")
-                return
+                return False
                 
         await msg_obj.edit_text("⏳ Generating Relevancy Map & Angle (AI Processing)...")
         rel_map = generate_relevancy_map(niche, sitemap, trend)
         if not rel_map.get('angle'):
             await msg_obj.edit_text("❌ Could not generate angle. Try again.")
-            return
+            return False
         msg = (
             f"*Trend-Jacking Angle for {project_url}*\n\n"
             f"*Trending Topic:* {trend['query']}\n\n"
@@ -605,8 +615,10 @@ async def angle_command(update, context):
             f"*Post Link:* {rel_map.get('post_url', 'N/A')}"
         )
         await msg_obj.edit_text(msg, parse_mode="Markdown")
+        return True
     except Exception as e:
         await msg_obj.edit_text(f"❌ Error generating angle: {e}")
+        return False
 
 
 async def sitemap_command(update, context):
@@ -627,7 +639,7 @@ async def sitemap_command(update, context):
         if not proj:
             conn.close()
             await msg_obj.edit_text(f"Project not found: {project_url}")
-            return
+            return False
         pid = proj['id']
         c.execute("SELECT page_type, COUNT(*) as cnt FROM project_sitemaps WHERE project_id = %s GROUP BY page_type", (pid,))
         rows = c.fetchall()
@@ -645,7 +657,7 @@ async def sitemap_command(update, context):
             
             if not rows or rows[0]['cnt'] == 0:
                 await msg_obj.edit_text(f"❌ Could not find or parse a sitemap for {project_url}. Make sure it has a valid `/sitemap.xml`.", parse_mode="Markdown")
-                return
+                return False
                 
         msg = f"*Sitemap Knowledge Base: {project_url}*\n\n"
         for r in rows:
@@ -654,8 +666,10 @@ async def sitemap_command(update, context):
         from telegram import InlineKeyboardMarkup, InlineKeyboardButton
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🧠 Generate Angle", callback_data=f"cmd_angle_id_{pid}")]])
         await msg_obj.edit_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
+        return True
     except Exception as e:
         await msg_obj.edit_text(f"❌ Error: {e}")
+        return False
 
 
 async def ingesttrends_command(update, context):
