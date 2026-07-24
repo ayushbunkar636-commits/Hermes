@@ -340,6 +340,25 @@ def phase_gate() -> None:
         for lead in judged:
             new_status = "GATED" if lead.get("gate_passed") else "REJECTED"
             if new_status == "GATED":
+                # Fix 2: Filter leads with no valid submission URL / posting action
+                raw = {}
+                try:
+                    raw = json.loads(lead.get("raw_json") or "{}")
+                except Exception:
+                    pass
+                submission_url = raw.get("submission_url") or lead.get("url") or ""
+                posting_action = lead.get("posting_action") or raw.get("posting_action") or ""
+                no_valid_url = not submission_url or submission_url.strip() in ("", "N/A", "n/a", "none", "None")
+                no_valid_action = posting_action.strip().lower() in ("", "n/a", "none", "unknown")
+                if no_valid_url and no_valid_action:
+                    new_status = "REJECTED"
+                    wdb.update_lead(
+                        lead["id"],
+                        {"status": "REJECTED", "gate_reason": "no_valid_posting_url"},
+                        db_path=DB_PATH,
+                    )
+                    plog_verbose("gate", "no_posting_url_rejected", lead_id=lead["id"], url=lead.get("url"))
+                    continue
                 passed += 1
                 bdb.add_notification("approval", "Opportunity Approved", f"A new opportunity ({lead.get('site_url', '')}) passed the AI Quality Gate with score {lead.get('score', 0)}.", db_path=DB_PATH)
             wdb.update_lead(
@@ -355,6 +374,7 @@ def phase_gate() -> None:
                 db_path=DB_PATH,
             )
         log(f"gate: project={project.get('project_url')} judged={len(judged)} passed={passed}")
+
 
 
 def phase_openweb() -> None:

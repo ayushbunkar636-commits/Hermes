@@ -123,12 +123,16 @@ def build_inline_keyboard(card: dict) -> dict:
     return {
         "inline_keyboard": [
             [
-                {"text": "Approve", "callback_data": f"bl_approve:{alert_id}"},
-                {"text": "Edit", "callback_data": f"bl_edit:{alert_id}"},
-                {"text": "Reject", "callback_data": f"bl_reject:{alert_id}"},
-            ]
+                {"text": "✅ Approve", "callback_data": f"bl_approve:{alert_id}"},
+                {"text": "✏️ Edit", "callback_data": f"bl_edit:{alert_id}"},
+                {"text": "❌ Reject", "callback_data": f"bl_reject:{alert_id}"},
+            ],
+            [
+                {"text": "🔄 Regenerate Reply", "callback_data": f"bl_regen:{alert_id}"},
+            ],
         ]
     }
+
 
 
 def pick_chain_field(

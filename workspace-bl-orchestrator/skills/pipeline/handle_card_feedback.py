@@ -50,6 +50,7 @@ _RE_REJECT = re.compile(r"^bl_reject:(.+)$")
 _RE_EDIT = re.compile(r"^bl_edit:(.+)$")
 _RE_EDIT_APPLY = re.compile(r"^bl_edit_apply:(.+)$")
 _RE_EDIT_CANCEL = re.compile(r"^bl_edit_cancel:(.+)$")
+_RE_REGEN = re.compile(r"^bl_regen:(.+)$")
 _RE_TEXT_APPROVE = re.compile(r"^(%s:APPROVE|approve)\s*$")
 _RE_TEXT_REJECT = re.compile(r"^(%s:REJECT|reject)\s*$")
 _RE_TEXT_EDIT = re.compile(r"^(%s:EDIT|edit)\s*$")
@@ -230,6 +231,7 @@ def parse_input(payload: str | None, message_text: str | None) -> dict | None:
             (_RE_EDIT_APPLY, "edit_apply"),
             (_RE_EDIT_CANCEL, "edit_cancel"),
             (_RE_EDIT, "edit"),
+            (_RE_REGEN, "regen"),
         ):
             m = pattern.match(p)
             if m:
@@ -453,6 +455,68 @@ def main() -> int:
         if token and chat_id:
             send_message(token, chat_id, f"Edit cancelled for <code>{opp.alert_id}</code>.", reply_to_message_id=reply_id)
         print(f"EDIT_CANCELLED: {opp.alert_id}")
+
+    elif action == "regen":
+        # Regenerate the reply inline using the Ink AI worker
+        if token and chat_id:
+            send_message(token, chat_id, f"\u23f3 Regenerating reply for <code>{opp.alert_id}</code>... Please wait.", reply_to_message_id=reply_id)
+        try:
+            import sys as _sys
+            import os as _os
+            _pipeline_dir = _os.path.dirname(_os.path.abspath(__file__))
+            if _pipeline_dir not in _sys.path:
+                _sys.path.insert(0, _pipeline_dir)
+            import whitelist_db as wdb
+            from harvest_draft import build_run_bundle, invoke_ink
+            import json as _json
+
+            # Rebuild a minimal lead from the opportunity
+            lead = {
+                "id": opp.id,
+                "url": opp.site_url or "",
+                "domain": opp.site_domain or "",
+                "type": opp.post_type or "forum",
+                "target_title": opp.target_title or "",
+                "target_excerpt": opp.target_excerpt or "",
+                "discussion_intent": opp.opportunity_context or "",
+                "question_type": "",
+                "opportunity_context": opp.opportunity_context or "",
+                "opportunity_freshness": opp.opportunity_freshness or "unknown",
+                "posting_action": opp.posting_action or "reply",
+                "platform": opp.site_domain or "",
+                "raw_json": "{}",
+            }
+            project_url = opp.project_url or ""
+            project = wdb.get_project_by_url(project_url, db_path=args.db_path) or {"project_url": project_url, "niche": "", "id": 0}
+            run_dir, manifest_path, run_id = build_run_bundle(project, [lead])
+            ok = invoke_ink(project, run_dir, manifest_path)
+            if ok:
+                posts_path = _os.path.join(run_dir, "content", "posts.json")
+                with open(posts_path, encoding="utf-8") as f:
+                    posts = _json.load(f).get("posts") or []
+                if posts:
+                    new_content = posts[0].get("content") or ""
+                    save_content_version(opp.id, "regenerated", new_content, user_id=args.user_id, db_path=args.db_path)
+                    record_feedback(opp.id, "regen", user_id=args.user_id, source=source, raw_payload=raw, db_path=args.db_path)
+                    if token and chat_id:
+                        send_message(
+                            token, chat_id,
+                            f"\u2705 Regenerated reply for <code>{opp.alert_id}</code>:\n\n<pre>{new_content[:3000]}</pre>",
+                            reply_to_message_id=reply_id,
+                        )
+                    print(f"REGEN_OK: {opp.alert_id}")
+                else:
+                    if token and chat_id:
+                        send_message(token, chat_id, f"\u274c Regeneration failed: Ink produced no content.", reply_to_message_id=reply_id)
+                    print(f"REGEN_FAILED: no posts")
+            else:
+                if token and chat_id:
+                    send_message(token, chat_id, f"\u274c Regeneration failed: Ink worker error.", reply_to_message_id=reply_id)
+                print(f"REGEN_FAILED: ink error")
+        except Exception as e:
+            if token and chat_id:
+                send_message(token, chat_id, f"\u274c Regeneration error: {e}", reply_to_message_id=reply_id)
+            print(f"REGEN_ERROR: {e}")
 
     return 0
 
