@@ -844,7 +844,8 @@ def _sync_regen_task(opp):
 
 async def handle_bl_regen(update, context, opp):
     if not opp: return
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"⏳ Regenerating reply for <code>{opp.alert_id}</code>... Please wait.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+    escaped_id = str(opp.alert_id).replace("-com", "-c\u200bom").replace(".com", ".c\u200bom").replace("-org", "-o\u200brg").replace(".org", ".o\u200brg")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"⏳ Regenerating reply for <code>{escaped_id}</code>... Please wait.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
     import asyncio
     
     try:
@@ -853,7 +854,7 @@ async def handle_bl_regen(update, context, opp):
             new_content = result["content"]
             bdb.save_content_version(opp.id, "regenerated", new_content, user_id=str(update.effective_user.id), db_path=config.BL_DB_PATH)
             bdb.record_feedback(opp.id, "regen", user_id=str(update.effective_user.id), source="callback", raw_payload=update.callback_query.data, db_path=config.BL_DB_PATH)
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Regenerated reply for <code>{opp.alert_id}</code>:\n\n<pre>{new_content[:3000]}</pre>", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Regenerated reply for <code>{escaped_id}</code>:\n\n<pre>{new_content[:3000]}</pre>", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ Regeneration failed: {result.get('error')}", reply_to_message_id=update.callback_query.message.message_id)
     except Exception as e:

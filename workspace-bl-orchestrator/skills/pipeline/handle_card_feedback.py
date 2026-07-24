@@ -458,8 +458,9 @@ def main() -> int:
 
     elif action == "regen":
         # Regenerate the reply inline using the Ink AI worker
+        escaped_id = str(opp.alert_id).replace("-com", "-c\u200bom").replace(".com", ".c\u200bom").replace("-org", "-o\u200brg").replace(".org", ".o\u200brg")
         if token and chat_id:
-            send_message(token, chat_id, f"\u23f3 Regenerating reply for <code>{opp.alert_id}</code>... Please wait.", reply_to_message_id=reply_id)
+            send_message(token, chat_id, f"\u23f3 Regenerating reply for <code>{escaped_id}</code>... Please wait.", reply_to_message_id=reply_id)
         try:
             import sys as _sys
             import os as _os
@@ -501,7 +502,7 @@ def main() -> int:
                     if token and chat_id:
                         send_message(
                             token, chat_id,
-                            f"\u2705 Regenerated reply for <code>{opp.alert_id}</code>:\n\n<pre>{new_content[:3000]}</pre>",
+                            f"\u2705 Regenerated reply for <code>{escaped_id}</code>:\n\n<pre>{new_content[:3000]}</pre>",
                             reply_to_message_id=reply_id,
                         )
                     print(f"REGEN_OK: {opp.alert_id}")
