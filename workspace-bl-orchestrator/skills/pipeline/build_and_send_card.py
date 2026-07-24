@@ -53,8 +53,9 @@ def load_json(path: str, default: dict | None = None) -> dict:
 
 
 def load_bot_token() -> str:
-    if os.environ.get("TELEGRAM_BOT_TOKEN"):
-        return str(os.environ.get("TELEGRAM_BOT_TOKEN")).strip()
+    import config
+    if config.TELEGRAM_BOT_TOKEN:
+        return config.TELEGRAM_BOT_TOKEN
 
     tg_cfg = load_json(TELEGRAM_CONFIG)
     token = str(tg_cfg.get("bot_token") or "").strip()
