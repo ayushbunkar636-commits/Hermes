@@ -320,13 +320,16 @@ def build_card_header(card: dict) -> str:
         ]
     )
 
-    sent_label = html_escape(format_display(str(card.get("card_sent_at") or "")))
-    lines.append(f"\n<i>Sent: {sent_label}</i>")
-
     caption = "\n".join(lines)
-    if len(caption) > TELEGRAM_CAPTION_MAX:
-        caption = html_safe_truncate(caption, TELEGRAM_CAPTION_MAX)
-    return caption
+    
+    sent_label = html_escape(format_display(str(card.get("card_sent_at") or "")))
+    sent_suffix = f"\n\n<i>Sent: {sent_label}</i>"
+    
+    max_len = TELEGRAM_CAPTION_MAX - len(sent_suffix) - 5
+    if len(caption) > max_len:
+        caption = html_safe_truncate(caption, max_len)
+        
+    return caption + sent_suffix
 
 
 def build_draft_message(card: dict) -> str:
