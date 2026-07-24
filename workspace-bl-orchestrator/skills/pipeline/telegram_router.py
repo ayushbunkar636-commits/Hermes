@@ -388,7 +388,7 @@ async def add_command(update, context):
         )
         return True
     except Exception as e:
-        await update.effective_message.reply_text(f"❌ Error adding project: {e}")
+        await update.effective_message.reply_text(f"❌ Error adding project: {e}\n\nPlease try sending the URL again.")
         return False
 
 async def projects_command(update, context):
@@ -440,10 +440,10 @@ async def delete_command(update, context):
 
         await msg_obj.edit_text(f"🗑️ Project deleted from all systems:\n`{project}`", parse_mode="Markdown")
     except ValueError as e:
-        await msg_obj.edit_text(f"❌ {e}")
+        await msg_obj.edit_text(f"❌ {e}\n\nPlease try sending the URL again.")
         return False
     except Exception as e:
-        await msg_obj.edit_text(f"❌ Error deleting project: {e}")
+        await msg_obj.edit_text(f"❌ Error deleting project: {e}\n\nPlease try sending the URL again.")
         return False
         
     return True
@@ -617,7 +617,7 @@ async def angle_command(update, context):
         await msg_obj.edit_text(msg, parse_mode="Markdown")
         return True
     except Exception as e:
-        await msg_obj.edit_text(f"❌ Error generating angle: {e}")
+        await msg_obj.edit_text(f"❌ Error generating angle: {e}\n\nPlease try sending the URL again.")
         return False
 
 
@@ -668,7 +668,7 @@ async def sitemap_command(update, context):
         await msg_obj.edit_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
         return True
     except Exception as e:
-        await msg_obj.edit_text(f"❌ Error: {e}")
+        await msg_obj.edit_text(f"❌ Error: {e}\n\nPlease try sending the URL again.")
         return False
 
 
