@@ -724,10 +724,10 @@ def delete_project(project_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
         # Foreign keys cascading through opportunities
         conn.execute(
             "DELETE FROM feedback_events WHERE opportunity_id IN "
-            "(SELECT id FROM opportunities WHERE project_id=%s OR project_url=%s)",
-            (pid, project_url),
+            "(SELECT id FROM opportunities WHERE project_url=%s)",
+            (project_url,),
         )
-        conn.execute("DELETE FROM opportunities WHERE project_id=%s OR project_url=%s", (pid, project_url))
+        conn.execute("DELETE FROM opportunities WHERE project_url=%s", (project_url,))
         
         conn.execute(
             "DELETE FROM site_score_history WHERE whitelist_site_id IN "
