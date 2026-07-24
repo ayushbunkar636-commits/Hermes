@@ -152,20 +152,12 @@ def update_scan_progress(project_id: int, percent: int, status: str) -> None:
     bar = "■" * filled + "░" * (10 - filled)
     
     if percent >= 100:
-        if "No opportunities" in status:
-            status_msg = (
-                f"✅ *Project Setup: Complete* [{bar}] 100% Scanned\n"
-                f"• *Status:* {status}\n"
-                f"• *Total Time:* {elapsed_str}\n\n"
-                f"_Tracking fully active. Future opportunities will be sent here automatically._"
-            )
-        else:
-            status_msg = (
-                f"✅ *Project Setup: Complete* [{bar}] 100% Scanned\n"
-                f"• *Status:* First opportunities delivered successfully!\n"
-                f"• *Total Time:* {elapsed_str}\n\n"
-                f"_Tracking fully active. Future opportunities will be sent here automatically._"
-            )
+        status_msg = (
+            f"✅ *Project Setup: Complete* [{bar}] 100% Scanned\n"
+            f"• *Status:* {status}\n"
+            f"• *Total Time:* {elapsed_str}\n\n"
+            f"_Tracking fully active. Future opportunities will be sent here automatically._"
+        )
     else:
         status_msg = (
             f"⏳ *Project Setup: Active* [{bar}] {percent}% Scanned\n"
