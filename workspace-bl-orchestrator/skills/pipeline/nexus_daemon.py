@@ -82,6 +82,7 @@ if _SEARCH_DIR not in sys.path:
 
 _last_delivery_ts: dict[int, float] = {}
 _tick_counter = 0
+_active_progress_pids: list[int] = []
 
 
 def log(msg: str) -> None:
@@ -319,13 +320,19 @@ def _scan_one_site(site: dict) -> None:
 
 
 def phase_scan() -> None:
+    global _active_progress_pids
+    for pid in _active_progress_pids:
+        update_scan_progress(pid, 20, "🔍 Scanning seed sites (HackerNews, Reddit, Bitcointalk)...")
+    if _active_progress_pids:
+        time.sleep(2.5)
+
     due = wdb.get_due_sites(limit=SITES_PER_TICK, db_path=DB_PATH)
     if not due:
         log("scan: no sites due")
         return
     for site in due:
         pid = site.get("project_id")
-        update_scan_progress(pid, 20, f"Discovering leads from {site.get('domain')}...")
+        update_scan_progress(pid, 30, f"Discovering leads from {site.get('domain')}...")
         plog_verbose(
             "tick", "due_sites",
             domain=site.get("domain"),
@@ -340,6 +347,12 @@ def phase_scan() -> None:
 
 
 def phase_score() -> None:
+    global _active_progress_pids
+    for pid in _active_progress_pids:
+        update_scan_progress(pid, 50, "📊 Evaluating and scoring discovered leads...")
+    if _active_progress_pids:
+        time.sleep(2.5)
+
     new_leads = wdb.get_leads_by_status("NEW", limit=200, db_path=DB_PATH)
     if not new_leads:
         return
@@ -392,9 +405,14 @@ def phase_score() -> None:
 
 
 def phase_gate() -> None:
+    global _active_progress_pids
+    for pid in _active_progress_pids:
+        update_scan_progress(pid, 75, "🛡️ Verifying opportunity compliance and filtering...")
+    if _active_progress_pids:
+        time.sleep(2.5)
+
     for project in wdb.get_active_projects(db_path=DB_PATH):
         pid = project["id"]
-        update_scan_progress(pid, 70, "Gating and verifying opportunity compliance...")
         scored = wdb.get_leads_by_status("SCORED", limit=GATE_TOP_N, project_id=pid, db_path=DB_PATH)
         scored = [l for l in scored if (l.get("score_100") or 0) >= SCORE_FLOOR]
         
@@ -636,6 +654,15 @@ def phase_refresh_priorities() -> None:
 
 
 def phase_draft() -> None:
+    global _active_progress_pids
+    for pid in _active_progress_pids:
+        # Check if they still exist in scan_progress (might have been completed/deleted)
+        progress = wdb.get_scan_progress(pid, db_path=DB_PATH)
+        if progress:
+            update_scan_progress(pid, 90, "✍️ Generating copy-paste drafting replies...")
+    if _active_progress_pids:
+        time.sleep(2.5)
+
     for project in wdb.get_active_projects(db_path=DB_PATH):
         pid = project["id"]
         if DELIVERY_INTERVAL_MIN > 0:
@@ -689,8 +716,16 @@ def phase_resurface() -> None:
 
 
 def tick() -> None:
-    global _tick_counter
+    global _tick_counter, _active_progress_pids
     _tick_counter += 1
+    
+    _active_progress_pids = []
+    try:
+        with wdb._connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT project_id FROM scan_progress").fetchall()
+            _active_progress_pids = [r["project_id"] for r in rows]
+    except Exception as e:
+        log(f"Error querying active progress PIDs: {e}")
     
     # Record heartbeat
     try:
