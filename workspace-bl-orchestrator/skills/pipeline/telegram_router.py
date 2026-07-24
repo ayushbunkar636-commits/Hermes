@@ -387,6 +387,7 @@ async def add_command(update, context):
 
 async def projects_command(update, context):
     """Lists all active projects."""
+    msg_obj = await update.effective_message.reply_text("⏳ Fetching active projects list...")
     try:
         conn = config.get_db_connection()
         c = conn.cursor()
@@ -395,16 +396,16 @@ async def projects_command(update, context):
         conn.close()
         
         if not rows:
-            await update.effective_message.reply_text("No active projects. Use /add <url> <niche> to add one.")
+            await msg_obj.edit_text("No active projects. Use /add <url> <niche> to add one.")
             return
             
         msg = "📋 *Active Projects*\n\n"
         for i, row in enumerate(rows, 1):
             msg += f"{i}. {row['project_url']} (Niche: {row['niche']})\n"
             
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        await msg_obj.edit_text(msg, parse_mode="Markdown")
     except Exception as e:
-        await update.effective_message.reply_text(f"Error fetching projects: {e}")
+        await msg_obj.edit_text(f"Error fetching projects: {e}")
 
 async def delete_command(update, context):
     """Handles /delete <url> - deletes from both SQLite (daemon) and PostgreSQL (dashboard)"""
@@ -412,6 +413,7 @@ async def delete_command(update, context):
         await update.effective_message.reply_text("Usage: /delete <project_url>")
         return
     project = context.args[0]
+    msg_obj = await update.effective_message.reply_text(f"⏳ Deleting project `{project}` from all systems...", parse_mode="Markdown")
     try:
         # 1. Delete from SQLite (daemon's source of truth)
         wdb.init_whitelist_db(config.BL_DB_PATH)
@@ -430,11 +432,11 @@ async def delete_command(update, context):
             # Don't fail if PostgreSQL delete has an issue - SQLite delete was the critical one
             print(f"[delete_command] PostgreSQL delete warning: {pg_err}")
 
-        await update.effective_message.reply_text(f"🗑️ Project deleted from all systems:\n`{project}`", parse_mode="Markdown")
+        await msg_obj.edit_text(f"🗑️ Project deleted from all systems:\n`{project}`", parse_mode="Markdown")
     except ValueError as e:
-        await update.effective_message.reply_text(f"❌ {e}")
+        await msg_obj.edit_text(f"❌ {e}")
     except Exception as e:
-        await update.effective_message.reply_text(f"❌ Error deleting project: {e}")
+        await msg_obj.edit_text(f"❌ Error deleting project: {e}")
 
 async def scan_command(update, context):
     """Handles /scan"""
@@ -451,6 +453,7 @@ async def scan_command(update, context):
 
 async def stats_command(update, context):
     """Displays global system stats."""
+    msg_obj = await update.effective_message.reply_text("⏳ Compiling global system stats...")
     try:
         conn = config.get_db_connection()
         c = conn.cursor()
@@ -482,14 +485,15 @@ async def stats_command(update, context):
         msg += f"Pending Review: {stats.get('SCORED', 0) + stats.get('GATED', 0)}\n"
         msg += f"Rejected: {stats.get('REJECTED', 0)}\n"
         
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        await msg_obj.edit_text(msg, parse_mode="Markdown")
     except Exception as e:
-        await update.effective_message.reply_text(f"Error fetching stats: {e}")
+        await msg_obj.edit_text(f"Error fetching stats: {e}")
 
 
 async def health_command(update, context):
     """Phase 10: Reports daemon health based on heartbeat file."""
     import json, time, os
+    msg_obj = await update.effective_message.reply_text("⏳ Checking daemon health and heartbeat...")
     try:
         if not os.path.exists(".daemon_heartbeat.json"):
             hb_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".daemon_heartbeat.json")
@@ -517,7 +521,7 @@ async def health_command(update, context):
     except Exception as e:
         msg = f"Failed to read heartbeat: `{e}`\nIs the daemon running?"
         
-    await update.effective_message.reply_text(msg, parse_mode="Markdown")
+    await msg_obj.edit_text(msg, parse_mode="Markdown")
 
 
 # ── V2.0 Telegram Commands ───────────────────────────────────────────────────
@@ -527,6 +531,7 @@ async def trends_command(update, context):
     if not _V2_ENABLED:
         await update.effective_message.reply_text("V2 Trend Engine not available on this server.")
         return
+    msg_obj = await update.effective_message.reply_text("⏳ Fetching today's top global trending topics...")
     try:
         conn = config.get_db_connection()
         c = conn.cursor()
@@ -534,15 +539,15 @@ async def trends_command(update, context):
         rows = c.fetchall()
         conn.close()
         if not rows:
-            await update.effective_message.reply_text("No trends found. Run /ingesttrends to fetch fresh data.")
+            await msg_obj.edit_text("No trends found. Run /ingesttrends to fetch fresh data.")
             return
         msg = "*Today's Global Trends (V2.0)*\n\n"
         for i, r in enumerate(rows, 1):
             msg += f"{i}. {r['trend_query']}\n"
         msg += r"\nUse /angle <project\_url> to generate a Trend-Jacking angle for your project."
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        await msg_obj.edit_text(msg, parse_mode="Markdown")
     except Exception as e:
-        await update.effective_message.reply_text(f"Error fetching trends: {e}")
+        await msg_obj.edit_text(f"Error fetching trends: {e}")
 
 
 async def angle_command(update, context):
@@ -554,7 +559,7 @@ async def angle_command(update, context):
         await update.effective_message.reply_text("Usage: /angle <project_url>\nExample: /angle https://clientfruits.com")
         return
     project_url = context.args[0].strip()
-    await update.effective_message.reply_text(f"Generating trend-jacking angle for `{project_url}`...", parse_mode="Markdown")
+    msg_obj = await update.effective_message.reply_text(f"⏳ Fetching project details for `{project_url}`...", parse_mode="Markdown")
     try:
         # Get project from DB
         conn = config.get_db_connection()
@@ -563,31 +568,34 @@ async def angle_command(update, context):
         proj = c.fetchone()
         conn.close()
         if not proj:
-            await update.effective_message.reply_text(f"Project not found: {project_url}\nAdd it first with /add")
+            await msg_obj.edit_text(f"Project not found: {project_url}\nAdd it first with /add")
             return
         pid = proj['id']
         niche = proj['niche'] or ''
+        await msg_obj.edit_text("⏳ Checking Sitemap Knowledge Base...")
         sitemap = get_project_sitemap(pid)
         trend = get_latest_trend()
         if not sitemap:
-            await update.effective_message.reply_text("Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
+            await msg_obj.edit_text("⏳ Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
             scan_project_sitemap(pid, project_url)
             sitemap = get_project_sitemap(pid)
             if not sitemap:
-                await update.effective_message.reply_text("Failed to find or parse sitemap for this URL. Ensure it has a /sitemap.xml")
+                await msg_obj.edit_text("❌ Failed to find or parse sitemap for this URL. Ensure it has a /sitemap.xml")
                 return
                 
+        await msg_obj.edit_text("⏳ Checking for Top Global Trends...")
         if not trend:
-            await update.effective_message.reply_text("No trends found. Scanning live right now...", parse_mode="Markdown")
+            await msg_obj.edit_text("⏳ No trends found. Fetching live trends right now...", parse_mode="Markdown")
             ingest_trends()
             trend = get_latest_trend()
             if not trend:
-                await update.effective_message.reply_text("Failed to fetch trends. Try again later.")
+                await msg_obj.edit_text("❌ Failed to fetch trends. Try again later.")
                 return
                 
+        await msg_obj.edit_text("⏳ Generating Relevancy Map & Angle (AI Processing)...")
         rel_map = generate_relevancy_map(niche, sitemap, trend)
         if not rel_map.get('angle'):
-            await update.effective_message.reply_text("Could not generate angle. Try again.")
+            await msg_obj.edit_text("❌ Could not generate angle. Try again.")
             return
         msg = (
             f"*Trend-Jacking Angle for {project_url}*\n\n"
@@ -596,9 +604,9 @@ async def angle_command(update, context):
             f"*Pillar Link:* {rel_map.get('pillar_url', 'N/A')}\n"
             f"*Post Link:* {rel_map.get('post_url', 'N/A')}"
         )
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        await msg_obj.edit_text(msg, parse_mode="Markdown")
     except Exception as e:
-        await update.effective_message.reply_text(f"Error generating angle: {e}")
+        await msg_obj.edit_text(f"❌ Error generating angle: {e}")
 
 
 async def sitemap_command(update, context):
@@ -610,6 +618,7 @@ async def sitemap_command(update, context):
         await update.message.reply_text("Usage: /sitemap <project_url>\nExample: /sitemap https://clientfruits.com")
         return
     project_url = context.args[0].strip()
+    msg_obj = await update.message.reply_text(f"⏳ Checking sitemap knowledge base for `{project_url}`...", parse_mode="Markdown")
     try:
         conn = config.get_db_connection()
         c = conn.cursor()
@@ -617,14 +626,14 @@ async def sitemap_command(update, context):
         proj = c.fetchone()
         if not proj:
             conn.close()
-            await update.message.reply_text(f"Project not found: {project_url}")
+            await msg_obj.edit_text(f"Project not found: {project_url}")
             return
         pid = proj['id']
         c.execute("SELECT page_type, COUNT(*) as cnt FROM project_sitemaps WHERE project_id = %s GROUP BY page_type", (pid,))
         rows = c.fetchall()
         conn.close()
         if not rows:
-            await update.message.reply_text("Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
+            await msg_obj.edit_text("⏳ Sitemap not found in DB. Scanning live right now...", parse_mode="Markdown")
             scan_project_sitemap(pid, project_url)
             
             # Re-fetch after scan
@@ -635,7 +644,7 @@ async def sitemap_command(update, context):
             conn.close()
             
             if not rows or rows[0]['cnt'] == 0:
-                await update.message.reply_text(f"Could not find or parse a sitemap for {project_url}. Make sure it has a valid `/sitemap.xml`.", parse_mode="Markdown")
+                await msg_obj.edit_text(f"❌ Could not find or parse a sitemap for {project_url}. Make sure it has a valid `/sitemap.xml`.", parse_mode="Markdown")
                 return
                 
         msg = f"*Sitemap Knowledge Base: {project_url}*\n\n"
@@ -644,9 +653,9 @@ async def sitemap_command(update, context):
         msg += "\nClick the button below to generate a Trend-Jacking reply using these pages."
         from telegram import InlineKeyboardMarkup, InlineKeyboardButton
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🧠 Generate Angle", callback_data=f"cmd_angle_id_{pid}")]])
-        await update.effective_message.reply_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
+        await msg_obj.edit_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
     except Exception as e:
-        await update.effective_message.reply_text(f"Error: {e}")
+        await msg_obj.edit_text(f"❌ Error: {e}")
 
 
 async def ingesttrends_command(update, context):
@@ -654,12 +663,12 @@ async def ingesttrends_command(update, context):
     if not _V2_ENABLED:
         await update.effective_message.reply_text("V2 Trend Engine not available.")
         return
-    await update.effective_message.reply_text("Fetching latest global trends... please wait.")
+    msg_obj = await update.effective_message.reply_text("⏳ Fetching latest global trends... please wait.")
     try:
         ingest_trends()
-        await update.effective_message.reply_text("Done! Use /trends to see what's trending now.")
+        await msg_obj.edit_text("✅ Done! Use /trends to see what's trending now.")
     except Exception as e:
-        await update.effective_message.reply_text(f"Error: {e}")
+        await msg_obj.edit_text(f"❌ Error: {e}")
 
 # ── Button Interface ─────────────────────────────────────────────────────────
 
