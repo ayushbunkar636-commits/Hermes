@@ -36,6 +36,8 @@ load_env()
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "Hs0rbI257TWjVuuHPUkSg9MToULOmjPp").strip()
 if MISTRAL_API_KEY:
     os.environ["HERMES_API_KEY"] = MISTRAL_API_KEY
+    os.environ["BIFROST_BASE_URL"] = "https://api.mistral.ai/v1"
+    os.environ["DEFAULT_MODEL"] = "mistral-large-latest"
     BIFROST_BASE_URL = "https://api.mistral.ai/v1"
     DEFAULT_MODEL = "mistral-large-latest"
 else:
