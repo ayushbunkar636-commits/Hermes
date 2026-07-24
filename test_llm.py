@@ -2,9 +2,9 @@ import json
 import urllib.request
 import urllib.error
 
-url = "https://bifrost-630757147027.us-central1.run.app/v1/chat/completions"
-api_key = "sk-bf-850b6f9c-ea92-49e0-aed3-4758f037965e"
-model = "openai/qwen3-coder-next:latest"
+url = "https://api.mistral.ai/v1/chat/completions"
+api_key = "Hs0rbI257TWjVuuHPUkSg9MToULOmjPp"
+model = "mistral-large-latest"
 
 payload = {
     "model": model,
