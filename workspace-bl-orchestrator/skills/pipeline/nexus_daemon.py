@@ -124,26 +124,31 @@ def update_scan_progress(project_id: int, percent: int, status: str) -> None:
     
     # Calculate elapsed time
     import datetime
-    from dateparser import parse as parse_date
     
     elapsed_str = "0s"
     remaining_str = "8m"
     try:
         started_at = progress.get("started_at")
         if started_at:
-            started_dt = parse_date(started_at)
-            if started_dt:
-                elapsed = int((datetime.datetime.utcnow() - started_dt).total_seconds())
+            # Handle PostgreSQL or SQLite UTC timestamps string
+            started_at = str(started_at).replace("Z", "+00:00")
+            if "." in started_at and "+" not in started_at:
+                started_at += "+00:00" # naive to UTC
+            elif "+" not in started_at:
+                started_at += "+00:00"
+            try:
+                started_dt = datetime.datetime.fromisoformat(started_at)
+                elapsed = int((datetime.datetime.now(datetime.timezone.utc) - started_dt).total_seconds())
                 elapsed = max(0, elapsed)
                 elapsed_str = f"{elapsed // 60}m {elapsed % 60}s" if elapsed > 60 else f"{elapsed}s"
                 
                 total_est = 480  # 8 minutes
-                remaining = max(10, total_est - elapsed)
-                if percent >= 100:
-                    remaining = 0
-                remaining_str = f"{remaining // 60}m {remaining % 60}s" if remaining > 60 else f"{remaining}s"
-    except Exception:
-        pass
+                rem = max(0, total_est - elapsed)
+                remaining_str = f"~{rem // 60}m" if rem > 60 else f"~{rem}s"
+            except Exception as dt_e:
+                log(f"Datetime parse error: {dt_e} for {started_at}")
+    except Exception as e:
+        log(f"Elapsed calc error: {e}")
         
     if percent >= 100:
         remaining_str = "Done"
