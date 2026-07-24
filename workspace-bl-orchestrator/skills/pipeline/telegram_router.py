@@ -324,10 +324,26 @@ async def handle_document(update, context):
         await update.message.reply_text("File upload received and routed natively via Hermes.")
 
 async def add_command(update, context):
-    """Handles /add <url> <niche>"""
+    """Handles /add <url> <niche> or triggers interactive add flow if no args."""
     if not context.args:
-        await update.message.reply_text("Usage: /add <project_url> [niche]")
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        
+        conn = config.get_db_connection()
+        c = conn.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS onboard_sessions (chat_id TEXT, user_id TEXT, step TEXT, PRIMARY KEY(chat_id, user_id))")
+        c.execute("""
+            INSERT INTO onboard_sessions (chat_id, user_id, step) 
+            VALUES (%s, %s, %s)
+            ON CONFLICT (chat_id, user_id) 
+            DO UPDATE SET step = EXCLUDED.step
+        """, (str(chat_id), str(user_id), "wait_add_url"))
+        conn.commit()
+        conn.close()
+        
+        await update.effective_message.reply_text("Please reply with the new project URL.")
         return
+        
     project = context.args[0]
     niche = " ".join(context.args[1:]) if len(context.args) > 1 else "auto"
     
