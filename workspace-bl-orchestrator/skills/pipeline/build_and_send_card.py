@@ -267,7 +267,7 @@ def build_card_header(card: dict) -> str:
         f"<b>OPPORTUNITY{rank_display}</b>",
         f"<b>Title:</b> {target_title}",
         f"<b>Platform:</b> {site_domain}",
-        f"<b>Score:</b> {score_display}  |  <b>Confidence:</b> {confidence_display}",
+        f"<b>Score:</b> {score_display}",
     ]
     
     if breakdown_text:
