@@ -694,12 +694,10 @@ def delete_project(project_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
         conn.execute("DELETE FROM seen_opportunities WHERE project_id=%s", (pid,))
         
         # New additions for PostgreSQL dependencies
-        conn.execute("DELETE FROM project_sitemaps WHERE project_id=%s", (pid,))
-        conn.execute("DELETE FROM project_competitors WHERE project_id=%s", (pid,))
-        conn.execute("DELETE FROM project_vocab WHERE project_id=%s", (pid,))
-        conn.execute("DELETE FROM domain_scores WHERE project_id=%s", (pid,))
-        conn.execute("DELETE FROM leads WHERE project_id=%s", (pid,))
-        conn.execute("DELETE FROM pipeline_runs WHERE project_id=%s", (pid,))
+        for table in ["project_sitemaps", "project_competitors", "project_vocab", "domain_scores", "leads", "pipeline_runs"]:
+            c_check = conn.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", (table,))
+            if c_check.fetchone()[0]:
+                conn.execute(f"DELETE FROM {table} WHERE project_id=%s", (pid,))
         
         # Foreign keys cascading through whitelist_sites
         conn.execute(
