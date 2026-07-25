@@ -36,13 +36,13 @@ load_env()
 # All values MUST exist in the .env file at the project root.
 # config.py only reads them — it never sets defaults for secrets.
 
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "").strip()
-if not MISTRAL_API_KEY:
+GX10_API_KEY = os.environ.get("GX10_API_KEY", "").strip()
+if not GX10_API_KEY:
     import sys
-    print("[config] WARNING: MISTRAL_API_KEY not set in .env — Bifrost calls will fail.", file=sys.stderr)
+    print("[config] WARNING: GX10_API_KEY not set in .env — Bifrost calls will fail.", file=sys.stderr)
 
-os.environ["MISTRAL_API_KEY"] = MISTRAL_API_KEY
-os.environ["HERMES_API_KEY"] = MISTRAL_API_KEY
+os.environ["GX10_API_KEY"] = GX10_API_KEY
+os.environ["HERMES_API_KEY"] = GX10_API_KEY
 
 BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://api.mistral.ai/v1")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "mistral-large-latest")
