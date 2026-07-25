@@ -271,7 +271,8 @@ def _scan_one_site(site: dict) -> None:
     project_id = site["project_id"]
     cfg = _project_config(site)
     project_stub = {"id": project_id, "niche": niche, "project_url": site.get("project_url")}
-    force_hunter = _tick_counter % HUNTER_EVERY_TICKS == 0
+    # Do not force LLM calls constantly on ticks; rely on natural cache expiration
+    force_hunter = False
     extra = _hunter_extra_queries(project_stub, cfg, force=force_hunter)
 
     log(f"scan: visiting {domain} (project={site.get('project_url')})")
@@ -780,7 +781,7 @@ def tick() -> None:
             phases.append(("v2-trends", phase_trend_ingest))
         if _tick_counter % SITEMAP_SCAN_EVERY_TICKS == 0:
             phases.append(("v2-sitemap", phase_sitemap_scan))
-        if _tick_counter % OPENWEB_EVERY_TICKS == 0:  # same cadence as openweb search
+        if _tick_counter % TREND_INGEST_EVERY_TICKS == 0:  # Only generate trend queries after ingestion, not every 2 mins
             phases.append(("v2-query", phase_trend_query))
 
     phases.extend([

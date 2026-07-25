@@ -148,7 +148,9 @@ def plan_queries(
     try:
         content = _call_llm(prompt, model, base_url, timeout)
         queries = _parse_queries(content)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger("opportunity_hunter").warning(f"LLM query planning failed: {e}")
         queries = []
 
     if not queries:
