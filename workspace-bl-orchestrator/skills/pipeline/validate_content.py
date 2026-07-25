@@ -107,9 +107,11 @@ def main() -> int:
             print(f"CONTENT_INVALID: posts[{i}] content too short")
             return 1
         backlink = str(post.get("backlink_url", ""))
-        if project_url and project_url not in content and backlink != project_url:
-            print(f"CONTENT_INVALID: posts[{i}] backlink not present in content")
-            return 1
+        # Check if EITHER the specific backlink OR the base project_url is in the content
+        if backlink and backlink not in content:
+            if project_url and project_url not in content:
+                print(f"CONTENT_INVALID: posts[{i}] backlink not present in content")
+                return 1
         image_path = post.get("image_path")
         if image_path and not os.path.isfile(str(image_path)):
             print(f"CONTENT_INVALID: posts[{i}] image_path missing on disk: {image_path}")

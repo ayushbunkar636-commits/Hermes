@@ -52,12 +52,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     await client.query('DELETE FROM seen_opportunities WHERE project_id = $1', [id]);
     await client.query('DELETE FROM vocab_terms WHERE project_id = $1', [id]);
     
-    // Extra Postgres tables
-    await client.query('DELETE FROM project_sitemaps WHERE project_id = $1', [id]);
-    await client.query('DELETE FROM project_competitors WHERE project_id = $1', [id]);
-    await client.query('DELETE FROM project_vocab WHERE project_id = $1', [id]);
-    await client.query('DELETE FROM domain_scores WHERE project_id = $1', [id]);
-    await client.query('DELETE FROM leads WHERE project_id = $1', [id]);
+    // Extra Postgres tables (Legacy tables might not exist)
+    const extraTables = [
+      'project_sitemaps', 'project_competitors', 'project_vocab', 
+      'domain_scores', 'leads'
+    ];
+    for (const table of extraTables) {
+      try {
+        await client.query(`DELETE FROM ${table} WHERE project_id = $1`, [id]);
+      } catch (e: any) {
+        if (e.code !== '42P01') { // 42P01 is relation does not exist
+          console.warn(`Warning: Could not delete from ${table}:`, e);
+        }
+      }
+    }
 
     // 4. Opportunities and feedback events
     await client.query('DELETE FROM feedback_events WHERE opportunity_id IN (SELECT id FROM opportunities WHERE project_id = $1)', [id]);
