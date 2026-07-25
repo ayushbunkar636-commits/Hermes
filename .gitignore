@@ -83,8 +83,8 @@ credentials/
 identity/
 devices/
 telegram/*.json
-.env
-*.env
+# .env
+# *.env
 
 # Runtime / caches
 .cache/
