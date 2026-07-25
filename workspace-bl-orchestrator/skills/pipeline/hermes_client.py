@@ -2,11 +2,13 @@ import os
 import json
 import time
 import uuid
+import random
 import logging
 import config
 import threading
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
 from urllib.error import URLError, HTTPError
 import config
 
@@ -30,7 +32,7 @@ class HermesMetrics:
 class HermesAPIError(Exception):
     pass
 
-def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_retries: int = 3, tools: list = None, stream: bool = False):
+def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_retries: int = 1, tools: list = None, stream: bool = False):
     url = f"{BIFROST_URL.rstrip('/')}/chat/completions"
     payload = {
         "model": model,
@@ -72,10 +74,13 @@ def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_ret
             resp = urllib.request.urlopen(req, timeout=timeout)
             if stream:
                 def iter_stream():
-                    with resp:
-                        for line in resp:
-                            if line.strip():
-                                yield line.decode("utf-8")
+                    try:
+                        with resp:
+                            for line in resp:
+                                if line.strip():
+                                    yield line.decode("utf-8")
+                    finally:
+                        resp.close()
                 return iter_stream()
             
             with resp:
@@ -92,11 +97,15 @@ def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_ret
             logger.warning(f"Bifrost Network/Timeout Error on attempt {attempt+1}/{max_retries}: {e}")
         
         if attempt < max_retries - 1:
-            sleep_time = 2 ** attempt
-            logger.info(f"Retrying in {sleep_time} seconds...")
+            # Jitter: randomize sleep to prevent thundering herd
+            sleep_time = min(2 ** attempt, 10) + random.uniform(0, 1)
+            logger.info(f"Retrying in {sleep_time:.1f} seconds...")
             time.sleep(sleep_time)
             
     raise HermesAPIError(f"Exhausted {max_retries} retries connecting to Bifrost.")
+
+# Bounded thread pool to prevent unbounded parallel LLM requests
+_WORKER_POOL = ThreadPoolExecutor(max_workers=10)
 
 class WorkerManager:
     @staticmethod
@@ -107,7 +116,7 @@ class WorkerManager:
                 target_func(*args, **kwargs)
             except Exception as e:
                 logger.error(f"Worker {agent_id} ({trace_id}) failed: {e}")
-        threading.Thread(target=safe_wrapper, name=trace_id, daemon=True).start()
+        _WORKER_POOL.submit(safe_wrapper)
         return trace_id
 
 class SessionManager:

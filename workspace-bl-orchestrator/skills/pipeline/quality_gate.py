@@ -83,14 +83,15 @@ def _build_user_prompt(leads: list[dict], niche: str, project_desc: str) -> str:
             if html and BeautifulSoup:
                 soup = BeautifulSoup(html, "html.parser")
                 text = soup.get_text(separator=" ", strip=True)
-                excerpt = text[:4000]
+                # HARD CAP: 500 chars max to prevent token explosion
+                excerpt = text[:500]
             else:
-                excerpt = (lead.get("target_excerpt") or "").strip()[:1000]
+                excerpt = (lead.get("target_excerpt") or "").strip()[:500]
             
             dofollow = raw_dict.get("is_dofollow", True)
             obl = raw_dict.get("outbound_link_count", 0)
         except Exception:
-            excerpt = (lead.get("target_excerpt") or "").strip()[:1000]
+            excerpt = (lead.get("target_excerpt") or "").strip()[:500]
             dofollow = True
             obl = 0
             

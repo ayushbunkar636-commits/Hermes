@@ -800,9 +800,15 @@ def tick() -> None:
         except Exception as e:  # noqa: BLE001
             log(f"{name}: UNCAUGHT ERROR {e}")
             _consecutive_errors += 1
-            if _consecutive_errors >= 5:
-                hermes_client.notify_telegram("⚠️ *EMERGENCY: DAEMON FAILING*", f"The Nexus Daemon has encountered 5 consecutive uncaught errors. Latest error in phase `{name}`: `{e}`")
-                _consecutive_errors = 0  # reset to avoid spamming
+            # Mandatory sleep on error to prevent tight crash-loops burning API quota
+            time.sleep(5)
+            if _consecutive_errors == 5:
+                # Notify but don't reset yet. Let main() pause the daemon.
+                try:
+                    import hermes_client
+                    hermes_client.notify_telegram("⚠️ *EMERGENCY: DAEMON FAILING*", f"The Nexus Daemon has encountered 5 consecutive uncaught errors. Latest error in phase `{name}`: `{e}`. Pausing for 15 minutes.")
+                except Exception:
+                    pass
         plog_trace(
             "tick", "phase_end",
             phase=name, duration_ms=int((time.time() - phase_start) * 1000),
@@ -858,6 +864,13 @@ def main() -> int:
             
         tick()
         ticks += 1
+        
+        global _consecutive_errors
+        if _consecutive_errors >= 5:
+            log("daemon: pausing for 15 minutes due to repeated fatal errors to prevent API runaway")
+            time.sleep(900)
+            _consecutive_errors = 0
+
         
         # Phase 10: Daemon Heartbeat
         try:
