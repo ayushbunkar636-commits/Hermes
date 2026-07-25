@@ -32,17 +32,23 @@ def load_env(env_path=None):
 
 load_env()
 
-# Mistral AI Override
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "Hs0rbI257TWjVuuHPUkSg9MToULOmjPp").strip()
-if MISTRAL_API_KEY:
-    os.environ["HERMES_API_KEY"] = MISTRAL_API_KEY
-    os.environ["BIFROST_BASE_URL"] = "https://api.mistral.ai/v1"
-    os.environ["DEFAULT_MODEL"] = "mistral-large-latest"
-    BIFROST_BASE_URL = "https://api.mistral.ai/v1"
-    DEFAULT_MODEL = "mistral-large-latest"
-else:
-    BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://placing-reliability-container-oecd.trycloudflare.com/v1")
-    DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "vertex/gemini-2.5-flash")
+# ─── API Keys & Endpoints (loaded from .env — never hardcode here) ──────────
+# All values MUST exist in the .env file at the project root.
+# config.py only reads them — it never sets defaults for secrets.
+
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "").strip()
+if not MISTRAL_API_KEY:
+    import sys
+    print("[config] WARNING: MISTRAL_API_KEY not set in .env — Bifrost calls will fail.", file=sys.stderr)
+
+os.environ["MISTRAL_API_KEY"] = MISTRAL_API_KEY
+os.environ["HERMES_API_KEY"] = MISTRAL_API_KEY
+
+BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://api.mistral.ai/v1")
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "mistral-large-latest")
+
+os.environ["BIFROST_BASE_URL"] = BIFROST_BASE_URL
+os.environ["DEFAULT_MODEL"] = DEFAULT_MODEL
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
