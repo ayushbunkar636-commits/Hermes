@@ -61,6 +61,7 @@ def _call_bifrost_with_retry(prompt: str, model: str, timeout: int = 60, max_ret
     }
     if "mistral.ai" not in url:
         headers["x-bf-vk"] = str(os.environ.get('HERMES_API_KEY'))
+        headers["Authorization"] = f"Bearer {os.environ.get('HERMES_API_KEY')}"
         
     req = urllib.request.Request(
         url,

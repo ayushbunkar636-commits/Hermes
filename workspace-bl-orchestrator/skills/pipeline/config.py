@@ -44,8 +44,8 @@ if not GX10_API_KEY:
 os.environ["GX10_API_KEY"] = GX10_API_KEY
 os.environ["HERMES_API_KEY"] = GX10_API_KEY
 
-BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://api.mistral.ai/v1")
-DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "mistral-large-latest")
+BIFROST_BASE_URL = os.environ.get("BIFROST_BASE_URL", "https://mod-trek-choir-captured.trycloudflare.com/v1")
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "gx10/qwen3-coder-next")
 
 os.environ["BIFROST_BASE_URL"] = BIFROST_BASE_URL
 os.environ["DEFAULT_MODEL"] = DEFAULT_MODEL
