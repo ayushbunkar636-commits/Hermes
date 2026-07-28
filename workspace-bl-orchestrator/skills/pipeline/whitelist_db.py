@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """whitelist_db.py — SQLite schema and helpers for the per-project whitelist system.
 
 New tables (all additive; existing opportunities/feedback_events tables untouched):
@@ -18,8 +18,8 @@ import os
 import config
 import psycopg2
 import psycopg2.extras
-import os
 import sys
+import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
@@ -292,12 +292,28 @@ def init_whitelist_db(db_path: str = DEFAULT_DB_PATH) -> None:
 # projects
 # ---------------------------------------------------------------------------
 
-def upsert_project(project_url: str, niche: str, name: str = "", db_path: str = DEFAULT_DB_PATH) -> int:
+def upsert_project(project_url: str, niche: str, name: str = "", db_path: str = DEFAULT_DB_PATH, resume_paused: bool = False) -> int:
     """Insert or ignore project row. Returns project_id."""
     init_whitelist_db(db_path)
     with _connect(db_path) as conn:
+        # Check if project already exists
+        existing = conn.execute(
+            "SELECT id, project_url, status FROM projects WHERE project_url=%s",
+            (project_url.strip(),)
+        ).fetchone()
+        if existing:
+            if resume_paused and existing['status'] == 'paused':
+                # Resume the paused project
+                conn.execute(
+                    "UPDATE projects SET status='active', niche=%s, name=%s WHERE project_url=%s",
+                    (niche.strip(), name.strip(), project_url.strip())
+                )
+                conn.commit()
+                return int(existing['id'])
+            else:
+                raise ValueError(f"Project already exists: {project_url}\nProject ID: {existing['id']}")
         conn.execute(
-            "INSERT INTO projects (project_url, niche, name) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            "INSERT INTO projects (project_url, niche, name) VALUES (%s, %s, %s)",
             (project_url.strip(), niche.strip(), name.strip()),
         )
         conn.commit()
@@ -705,9 +721,13 @@ def delete_project(project_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
         
         # New additions for PostgreSQL dependencies
         for table in ["project_sitemaps", "project_competitors", "project_vocab", "domain_scores", "leads", "pipeline_runs"]:
-            c_check = conn.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", (table,))
+            c_check = conn.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s)", (table,))
             if c_check.fetchone()[0]:
-                conn.execute(f"DELETE FROM {table} WHERE project_id=%s", (pid,))
+                try:
+                    conn.execute(f"DELETE FROM {table} WHERE project_id=%s", (pid,))
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Failed to delete from {table} during project deletion: {e}")
         
         # Foreign keys cascading through whitelist_sites
         conn.execute(
