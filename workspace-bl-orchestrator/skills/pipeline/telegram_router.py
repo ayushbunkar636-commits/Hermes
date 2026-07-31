@@ -1043,7 +1043,15 @@ async def handle_bl_approve(update, context, opp):
             vocab_miner.mine_project_vocab(pid, db_path=config.BL_DB_PATH)
     except Exception as e:
         logger.error(f"VOCAB_MINE_SKIP: {e}")
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Approved <code>{opp.alert_id}</code> for manual submission.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+    # Item 7: Rich confirmation message
+    confirm_msg = (
+        f"\u2705 <b>APPROVED</b>\n\n"
+        f"Opportunity <code>{opp.alert_id}</code> has been approved.\n"
+        f"\u2022 <b>Platform:</b> {opp.site_domain or 'N/A'}\n"
+        f"\u2022 <b>Project:</b> {opp.project_url or 'N/A'}\n\n"
+        f"<i>Copy the content from the reply above and post it on the target page.</i>"
+    )
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=confirm_msg, reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
 
 async def handle_bl_reject(update, context, opp):
     if not opp: return
@@ -1051,7 +1059,15 @@ async def handle_bl_reject(update, context, opp):
     bdb.record_feedback(opp.id, "reject", user_id=str(update.effective_user.id), user_username=update.effective_user.username, source="callback", raw_payload=update.callback_query.data, db_path=config.BL_DB_PATH)
     if opp.project_url and opp.site_url:
         wdb.mark_seen_for_project_url(opp.project_url, opp.site_url, db_path=config.BL_DB_PATH)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Rejected <code>{opp.alert_id}</code>. Feedback saved.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+    # Item 7: Rich confirmation message
+    confirm_msg = (
+        f"\u274c <b>REJECTED</b>\n\n"
+        f"Opportunity <code>{opp.alert_id}</code> has been rejected.\n"
+        f"\u2022 <b>Platform:</b> {opp.site_domain or 'N/A'}\n"
+        f"\u2022 <b>Project:</b> {opp.project_url or 'N/A'}\n\n"
+        f"<i>This opportunity will not be shown again. Feedback saved for improving future results.</i>"
+    )
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=confirm_msg, reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
 
 async def handle_bl_edit(update, context, opp):
     if not opp: return
@@ -1063,7 +1079,17 @@ async def handle_bl_edit(update, context, opp):
         tmp_path = f.name
         
     try:
-        caption = f"Edit <code>{opp.alert_id}</code>\n\nDownload -> edit -> save -> reply with corrected <b>.md</b> file."
+        # Item 7: Rich edit instruction message
+        caption = (
+            f"\u270f\ufe0f <b>EDIT MODE</b>\n\n"
+            f"Opportunity: <code>{opp.alert_id}</code>\n"
+            f"\u2022 <b>Platform:</b> {opp.site_domain or 'N/A'}\n\n"
+            f"<b>Instructions:</b>\n"
+            f"1\ufe0f\u20e3 Download the .md file below\n"
+            f"2\ufe0f\u20e3 Edit the content as needed\n"
+            f"3\ufe0f\u20e3 Reply with the corrected <b>.md</b> file\n\n"
+            f"<i>Your edited version will replace the original draft.</i>"
+        )
         msg = await context.bot.send_document(
             chat_id=update.effective_chat.id, 
             document=open(tmp_path, "rb"), 
@@ -1083,13 +1109,25 @@ async def handle_bl_edit_apply(update, context, opp):
     bdb.save_content_version(opp.id, "applied", suggested.content_md, user_id=str(update.effective_user.id), db_path=config.BL_DB_PATH)
     bdb.record_feedback(opp.id, "edit_apply", user_id=str(update.effective_user.id), source="callback", raw_payload=update.callback_query.data, edited_content=suggested.content_md, db_path=config.BL_DB_PATH)
     bdb.clear_edit_session(opp.id, str(update.effective_user.id), config.BL_DB_PATH)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Edit applied for <code>{opp.alert_id}</code>. Saved to database.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+    # Item 7: Rich confirmation
+    confirm_msg = (
+        f"\u2705 <b>EDIT APPLIED</b>\n\n"
+        f"Your edited version for <code>{opp.alert_id}</code> has been saved.\n"
+        f"<i>The updated content will be used for posting.</i>"
+    )
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=confirm_msg, reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
 
 async def handle_bl_edit_cancel(update, context, opp):
     if not opp: return
     bdb.clear_edit_session(opp.id, str(update.effective_user.id), config.BL_DB_PATH)
     bdb.record_feedback(opp.id, "edit_cancel", user_id=str(update.effective_user.id), source="callback", raw_payload=update.callback_query.data, db_path=config.BL_DB_PATH)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Edit cancelled for <code>{opp.alert_id}</code>.", reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
+    # Item 7: Rich confirmation
+    confirm_msg = (
+        f"\u21a9\ufe0f <b>EDIT CANCELLED</b>\n\n"
+        f"Edit session for <code>{opp.alert_id}</code> has been cancelled.\n"
+        f"<i>The original content remains unchanged.</i>"
+    )
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=confirm_msg, reply_to_message_id=update.callback_query.message.message_id, parse_mode="HTML")
 
 def _sync_regen_task(opp):
     import harvest_draft

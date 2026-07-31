@@ -48,13 +48,34 @@ except ImportError:
     BeautifulSoup = None
 
 _SYSTEM_PROMPT = (
-    "You are a strict backlink-opportunity quality gate and business impact predictor. "
-    "For each candidate thread, decide how good a fit it is for placing a genuinely helpful reply. "
-    "Reward: on-topic discussions, recent activity. Penalize: spam, off-topic, listicles. "
-    "Reject non-English content (score 0). "
+    "You are a strict backlink-opportunity quality gate and niche-relevance judge. "
+    "Your PRIMARY job is to ensure each opportunity is DIRECTLY RELEVANT to the project's niche. "
+    "An opportunity on a high-authority site is WORTHLESS if it's off-topic for the niche. "
+    "\n\n"
+    "SCORING RULES:\n"
+    "- Score 8-10: Thread is directly about the project's niche, has recent activity, "
+    "and a helpful reply would naturally fit.\n"
+    "- Score 6-7: Thread is tangentially related to the niche, reply could work "
+    "but would require some stretching.\n"
+    "- Score 3-5: Thread mentions niche keywords but is primarily about something else. "
+    "Likely a poor fit.\n"
+    "- Score 0-2: Thread is off-topic, spam, non-English, dead, or a listicle "
+    "with no discussion value.\n"
+    "\n"
+    "HARD REJECT (score 0): non-English content, pure spam, closed threads, "
+    "or threads where a reply would look spammy.\n"
+    "\n"
     "You must ALSO evaluate intent and spam markers based on the full text and SEO metrics provided. "
     "Return STRICT JSON ONLY matching this exact schema:\n"
-    '{"scores":[{"i":<index>,"score":<0-10 number>,"reason":"<short>","is_appropriate":<bool>,"is_spam":<bool>,"is_active":<bool>,"has_commercial_intent":<bool>,"reject_opportunity":<bool>,"discussion_intent":"<e.g. debugging/recommendation>","question_type":"<e.g. how-to>","impact":{"traffic":"<e.g. 12K>","seo":"<Low/Medium/High>","lead_quality":"<e.g. Excellent>","business_impact":"<e.g. High>","revenue":"<e.g. $4500>","priority":"<Low/Medium/High>"}}]}\n'
+    '{"scores":[{"i":<index>,"score":<0-10 number>,"reason":"<short>",'
+    '"is_appropriate":<bool>,"is_spam":<bool>,"is_active":<bool>,'
+    '"has_commercial_intent":<bool>,"reject_opportunity":<bool>,'
+    '"niche_relevance":"<direct/tangential/off-topic>",'
+    '"discussion_intent":"<e.g. debugging/recommendation>",'
+    '"question_type":"<e.g. how-to>",'
+    '"impact":{"traffic":"<e.g. 12K>","seo":"<Low/Medium/High>",'
+    '"lead_quality":"<e.g. Excellent>","business_impact":"<e.g. High>",'
+    '"revenue":"<e.g. $4500>","priority":"<Low/Medium/High>"}}]}\n'
     "No prose outside the JSON."
 )
 
@@ -67,6 +88,9 @@ def _build_user_prompt(leads: list[dict], niche: str, project_desc: str) -> str:
     lines = [
         f"PROJECT NICHE: {niche}",
         f"PROJECT DESCRIPTION: {project_desc or '(none provided)'}",
+        "",
+        "IMPORTANT: Only score 6+ if the thread is DIRECTLY or CLOSELY related to the niche above.",
+        "Off-topic threads should score 0-3 regardless of platform authority.",
         "",
         "CANDIDATES (judge each, keep indexes):",
     ]
@@ -99,7 +123,7 @@ def _build_user_prompt(leads: list[dict], niche: str, project_desc: str) -> str:
             f"[{i}] title: {title!r} | freshness: {fresh} | url: {url} | dofollow: {dofollow} | OBL: {obl}\n     text: {excerpt!r}"
         )
     lines.append("")
-    lines.append('Respond with JSON: {"scores":[{"i":0,"score":7.5,"reason":"...", "is_spam":false, ...}]}')
+    lines.append('Respond with JSON: {"scores":[{"i":0,"score":7.5,"reason":"...","niche_relevance":"direct", ...}]}')
     return "\n".join(lines)
 
 

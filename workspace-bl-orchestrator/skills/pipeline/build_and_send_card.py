@@ -184,19 +184,96 @@ def format_draft_plain(text: str) -> str:
     return text.strip()
 
 
-def _card_score_display(card: dict) -> tuple[str, str, str, str]:
+# ── Human-readable platform name mapping ──────────────────────────────────
+_PLATFORM_DISPLAY_NAMES = {
+    "reddit.com": "Reddit",
+    "www.reddit.com": "Reddit",
+    "news.ycombinator.com": "Hacker News",
+    "ycombinator.com": "Hacker News",
+    "bitcointalk.org": "BitcoinTalk Forum",
+    "x.com": "X (Twitter)",
+    "twitter.com": "X (Twitter)",
+    "medium.com": "Medium",
+    "dev.to": "Dev.to",
+    "quora.com": "Quora",
+    "stackexchange.com": "Stack Exchange",
+    "stackoverflow.com": "Stack Overflow",
+    "producthunt.com": "Product Hunt",
+    "indiehackers.com": "IndieHackers",
+    "cryptotalk.org": "CryptoTalk",
+    "bitcoinstalks.org": "Crypto Talk Forums",
+}
+
+_HARVESTER_DISPLAY_NAMES = {
+    "hn_algolia": "Hacker News",
+    "reddit_api": "Reddit",
+    "reddit_json": "Reddit",
+    "rss_sitemap": "RSS Feed",
+    "generic_search": "Web Search",
+    "ddg_html": "Web Search",
+    "ddg_lite": "Web Search",
+    "searxng": "Web Search",
+}
+
+def _humanize_platform(domain: str, source_engine: str = "") -> str:
+    """Convert technical domain/source values to human-readable platform names."""
+    d = (domain or "").lower().strip()
+    # Check domain mapping first
+    if d in _PLATFORM_DISPLAY_NAMES:
+        return _PLATFORM_DISPLAY_NAMES[d]
+    # Check if it's a subreddit path
+    if "reddit.com" in d:
+        return "Reddit"
+    # Check source engine
+    se = (source_engine or "").lower().strip()
+    if se in _HARVESTER_DISPLAY_NAMES:
+        return _HARVESTER_DISPLAY_NAMES[se]
+    # Fallback: capitalize domain
+    if d:
+        return d.replace("www.", "").split(".")[0].capitalize() + " (" + d + ")"
+    return "Web"
+
+def _humanize_site_type(site_type: str) -> str:
+    """Convert technical site types to user-friendly labels."""
+    mapping = {
+        "qa_community": "Q&A / Community",
+        "forum": "Forum Discussion",
+        "blog": "Blog",
+        "news": "News Article",
+        "social": "Social Media",
+        "wiki": "Wiki",
+        "review": "Review Site",
+        "directory": "Directory",
+    }
+    return mapping.get((site_type or "").lower(), site_type or "Website")
+
+def _score_emoji(score: float) -> str:
+    """Return an emoji indicator based on score value."""
+    if score >= 80: return "🟢"
+    if score >= 60: return "🟡"
+    if score >= 40: return "🟠"
+    return "🔴"
+
+def _card_score_display(card: dict) -> tuple[str, str, str, str, str]:
+    # Item 5: Always normalize score to /100 for consistency
     score_100 = card.get("score_100")
-    score = score_100 if score_100 is not None else card.get("audit_score")
+    audit_score = card.get("audit_score")
+    if score_100 is not None:
+        score_val = float(score_100)
+    elif audit_score is not None:
+        # Convert /10 scale to /100
+        score_val = float(audit_score) * 10
+    else:
+        score_val = None
+    
     rank = card.get("rank")
     score_display = ""
-    if score is not None:
-        if score_100 is not None:
-            score_display = f"{score_100}/100"
-        else:
-            score_display = f"{score}/10"
+    if score_val is not None:
+        emoji = _score_emoji(score_val)
+        score_display = f"{emoji} {score_val:.0f}/100"
     rank_display = f" #{rank}" if rank else ""
     
-    # Parse new fields
+    # Confidence
     confidence = card.get("confidence")
     if confidence is not None:
         if confidence >= 90:
@@ -209,7 +286,7 @@ def _card_score_display(card: dict) -> tuple[str, str, str, str]:
             conf_label = "Low"
         confidence_display = f"{confidence}% ({conf_label})"
     else:
-        confidence_display = "N/A"
+        confidence_display = ""
     
     breakdown_text = ""
     bd = card.get("score_breakdown")
@@ -221,11 +298,11 @@ def _card_score_display(card: dict) -> tuple[str, str, str, str]:
                 bd = {}
         if isinstance(bd, dict):
             breakdown_text = (
-                f"• Recency: {bd.get('recency', 0)}/30\\n"
-                f"• Authority: {bd.get('authority', 0)}/30\\n"
-                f"• Relevance: {bd.get('relevance', 0)}/20\\n"
-                f"• Usability: {bd.get('usability', 0)}/10\\n"
-                f"• Freshness: {bd.get('freshness', 0)}/10"
+                f"  Recency: {bd.get('recency', 0)}/30\n"
+                f"  Authority: {bd.get('authority', 0)}/30\n"
+                f"  Relevance: {bd.get('relevance', 0)}/20\n"
+                f"  Usability: {bd.get('usability', 0)}/10\n"
+                f"  Freshness: {bd.get('freshness', 0)}/10"
             )
             
     reasoning_text = ""
@@ -237,85 +314,85 @@ def _card_score_display(card: dict) -> tuple[str, str, str, str]:
             except:
                 rs = []
         if isinstance(rs, list):
-            reasoning_text = "\\n".join(f"- {r}" for r in rs)
+            reasoning_text = "\n".join(f"  • {r}" for r in rs[:3])  # Limit to top 3 reasons
             
     return score_display, rank_display, confidence_display, breakdown_text, reasoning_text
 
 
 def build_card_header(card: dict) -> str:
-    """Metadata card (no draft body) — fits Telegram photo caption limit."""
+    """Build a clean, readable opportunity card with all key details consolidated."""
     niche = html_escape(card.get("niche") or "")
     project_url = html_escape(card.get("project_url") or "")
-    site_domain = html_escape(card.get("site_domain") or "")
+    raw_domain = card.get("site_domain") or ""
+    source_engine = card.get("source_engine") or ""
+    
+    # Item 2: Human-readable platform name instead of technical values
+    platform_display = html_escape(_humanize_platform(raw_domain, source_engine))
+    site_type_display = html_escape(_humanize_site_type(card.get("site_type") or ""))
+    
     score_display, rank_display, confidence_display, breakdown_text, reasoning_text = _card_score_display(card)
 
     target_title = html_escape(
-        truncate(card.get("target_title") or card.get("content_title") or "Backlink opportunity", 160)
+        truncate(card.get("target_title") or card.get("content_title") or "Backlink opportunity", 140)
     )
-    opportunity_context = html_escape(truncate(card.get("opportunity_context") or "", 160))
-    posting_action = html_escape(str(card.get("posting_action") or ""))
-    posting_steps = html_escape(format_posting_steps(normalize_posting_steps(card.get("posting_steps"))))
+    opportunity_context = html_escape(truncate(card.get("opportunity_context") or "", 140))
+    posting_action = html_escape(str(card.get("posting_action") or "reply"))
+    freshness = html_escape(str(card.get("opportunity_freshness") or ""))
 
     submission_url_raw = str(card.get("submission_url") or "").strip()
     submission_url = html_escape(submission_url_raw)
-    go_here = submission_url if submission_url_raw else "(locate exact submission page)"
+    go_here = submission_url if submission_url_raw else "(see target page)"
 
+    # ── Item 1 & 4: Clean layout with key details at top ──────────────
     lines = [
-        f"<b>OPPORTUNITY{rank_display}</b>",
-        f"<b>Title:</b> {target_title}",
-        f"<b>Platform:</b> {site_domain}",
-        f"<b>Score:</b> {score_display}",
+        f"🎯 <b>BACKLINK OPPORTUNITY</b>{rank_display}",
+        "━━━━━━━━━━━━━━━━━━━━━",
     ]
     
-    if breakdown_text:
-        lines.extend(["", "📊 <b>Breakdown:</b>", breakdown_text])
-        
-    impact_dict = card.get("business_impact")
-    if impact_dict:
-        if isinstance(impact_dict, str):
-            try:
-                impact_dict = json.loads(impact_dict)
-            except:
-                impact_dict = {}
-        if isinstance(impact_dict, dict) and impact_dict:
-            lines.extend([
-                "",
-                "📈 <b>Business Impact</b>",
-                f"• Lead Quality: {impact_dict.get('lead_quality', 'N/A')}",
-                f"• Priority: {impact_dict.get('priority', 'N/A')}",
-                f"• Traffic: {impact_dict.get('traffic', 'N/A')}",
-                f"• Revenue: {impact_dict.get('revenue', 'N/A')}",
-                f"• SEO Impact: {impact_dict.get('seo', 'N/A')}",
-            ])
-            
-    if reasoning_text:
-        lines.extend(["", "💡 <b>Reason:</b>", reasoning_text])
-        
+    # Key details block — always visible, always clear
     lines.extend([
-        "",
-        f"<b>Niche:</b> {niche} | <b>Project:</b> {project_url}",
-        f"<b>Action:</b> {posting_action or 'submit'}",
+        f"📌 <b>Title:</b> {target_title}",
+        f"🌐 <b>Platform:</b> {platform_display} ({site_type_display})",
+        f"📊 <b>Score:</b> {score_display or 'N/A'}",
+        f"🏷 <b>Project:</b> {project_url}",
+        f"📂 <b>Niche:</b> {niche}",
     ])
-
-    if not breakdown_text and target_title:
-        lines.extend(["", "<b>Target Title:</b>", f"{target_title}"])
-
+    
+    if freshness:
+        lines.append(f"⏰ <b>Freshness:</b> {freshness}")
+    
+    # Separator
+    lines.append("")
+    
+    # Why this opportunity matters
     if opportunity_context:
-        lines.extend(["", "<b>Why this is a good opportunity:</b>", f"{opportunity_context}"])
+        lines.extend([
+            "💡 <b>Why This Opportunity?</b>",
+            f"{opportunity_context}",
+            "",
+        ])
+    elif reasoning_text:
+        lines.extend([
+            "💡 <b>Why This Opportunity?</b>",
+            reasoning_text,
+            "",
+        ])
+    
+    # Score breakdown (if available)
+    if breakdown_text:
+        lines.extend(["📊 <b>Score Breakdown:</b>", breakdown_text, ""])
+        
+    # Confidence (if available)
+    if confidence_display:
+        lines.append(f"🔒 <b>Confidence:</b> {confidence_display}")
+        lines.append("")
 
-    lines.extend(
-        [
-            "",
-            "📝 <b>Content to Post:</b> see reply below ⬇️",
-            "",
-            "📋 <b>How to post:</b>",
-            "",
-            f"{posting_steps}",
-            "",
-            "🔗 <b>DIRECT LINK (Go here to post):</b>",
-            f"{go_here}",
-        ]
-    )
+    # Action section
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━━",
+        f"✍️ <b>Action:</b> {posting_action.capitalize()}",
+        f"🔗 <b>Post Here:</b> {go_here}",
+    ])
 
     caption = "\n".join(lines)
     
@@ -330,7 +407,7 @@ def build_card_header(card: dict) -> str:
 
 
 def build_draft_message(card: dict) -> str:
-    """Full copy-paste draft as a reply message (up to Telegram text limit)."""
+    """Item 3 & 6: Refined content formatting with clear header and copy-paste section."""
     raw = str(card.get("content_preview") or card.get("content_md") or "").strip()
     if not raw:
         return ""
@@ -342,12 +419,29 @@ def build_draft_message(card: dict) -> str:
         ref = f"{anchor} — {backlink}" if anchor else backlink
         draft = f"{draft}\n\nSource/Reference: {ref}"
 
-    overhead = len(_DRAFT_MSG_PREFIX) + len(_DRAFT_MSG_SUFFIX)
-    max_draft = TELEGRAM_MESSAGE_MAX - overhead - 20
+    # Build the posting instructions
+    posting_steps = format_posting_steps(normalize_posting_steps(card.get("posting_steps")))
+    
+    # Construct a cleaner draft message with instructions
+    parts = []
+    parts.append("📝 <b>CONTENT TO POST</b>")
+    parts.append("━━━━━━━━━━━━━━━━━━━━━")
+    parts.append("<i>Copy the text below and paste it on the target page:</i>")
+    parts.append("")
+    
+    # The actual content in a pre block
+    max_draft = TELEGRAM_MESSAGE_MAX - 300  # Reserve space for framing
     if len(draft) > max_draft:
         draft = draft[: max_draft - 1].rstrip() + "…"
-
-    return f"{_DRAFT_MSG_PREFIX}{html_escape(draft)}{_DRAFT_MSG_SUFFIX}"
+    parts.append(f"<pre>{html_escape(draft)}</pre>")
+    
+    # Posting instructions
+    if posting_steps:
+        parts.append("")
+        parts.append("📋 <b>HOW TO POST:</b>")
+        parts.append(html_escape(posting_steps))
+    
+    return "\n".join(parts)
 
 
 def build_caption(card: dict) -> str:
